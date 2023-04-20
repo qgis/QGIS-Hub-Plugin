@@ -1,0 +1,25 @@
+[general]
+name=QGIS Hub Plugin
+about=A QGIS plugins to fetch resources from the QGIS Hub
+category=Web
+hasProcessingProvider=no
+description=A QGIS plugins to fetch resources from the QGIS Hub
+icon=resources/images/default_icon.png
+tags=style, model, layer, resource, 3d model, project, hub
+
+# credits and contact
+author=Ismail Sunni
+email=imajimatika@gmail.com
+homepage=https://github.com/qgis/QGIS-Hub-Plugin
+repository=https://github.com/qgis/QGIS-Hub-Plugin
+tracker=https://github.com/qgis/QGIS-Hub-Plugin/issues
+
+# experimental flag
+deprecated=False
+experimental=True
+qgisMinimumVersion=3.28
+qgisMaximumVersion=3.99
+
+# versioning
+version=0.1.0
+changelog=

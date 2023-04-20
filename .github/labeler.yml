@@ -1,0 +1,22 @@
+ci-cd:
+  - .github/workflows/*
+  - .github/labeler.yml
+
+dependencies:
+  - requirements.txt
+  - requirements/*.txt
+
+documentation:
+  - docs/**/*
+
+packaging:
+  - requirements/packaging.txt
+  - setup.py
+
+quality:
+  - tests/**/*
+
+tooling:
+  - .pre-commit-config.yaml
+  - .vscode/**/*
+  - setup.cfg
