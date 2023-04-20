@@ -23,8 +23,8 @@ from qgis_hub_plugin.__about__ import (
     __uri_homepage__,
 )
 from qgis_hub_plugin.gui.dlg_settings import PlgOptionsFactory
-
 from qgis_hub_plugin.toolbelt import PlgLogger
+from qgis_hub_plugin.utilities.common import get_icon
 
 # ############################################################################
 # ########## Classes ###############
@@ -41,7 +41,6 @@ class QgisHubPluginPlugin:
         """
         self.iface = iface
         self.log = PlgLogger().log
-        
 
         # translation
         # initialize the locale
@@ -64,7 +63,20 @@ class QgisHubPluginPlugin:
         self.options_factory = PlgOptionsFactory()
         self.iface.registerOptionsWidgetFactory(self.options_factory)
 
+        # Toolbar
+        self.toolbar = self.iface.addToolBar("QGIS Hub Plugin")
+        self.toolbar.setObjectName("QGIS Hub PluginToolbar")
+
         # -- Actions
+        self.action_resource_browser = QAction(
+            get_icon("qbrowser_icon.svg"),
+            self.tr("Open Resource Browser"),
+            self.iface.mainWindow(),
+        )
+        self.action_resource_browser.triggered.connect(
+            self._open_resource_browser_dialog
+        )
+
         self.action_help = QAction(
             QgsApplication.getThemeIcon("mActionHelpContents.svg"),
             self.tr("Help"),
@@ -80,16 +92,16 @@ class QgisHubPluginPlugin:
             self.iface.mainWindow(),
         )
         self.action_settings.triggered.connect(
-            lambda: self.iface.showOptionsDialog(
-                currentPage="mOptionsPage{}".format(__title__)
-            )
+            lambda: self.iface.showOptionsDialog(currentPage=f"mOptionsPage{__title__}")
         )
 
         # -- Menu
+        self.iface.addPluginToMenu(__title__, self.action_resource_browser)
         self.iface.addPluginToMenu(__title__, self.action_settings)
         self.iface.addPluginToMenu(__title__, self.action_help)
 
-        
+        # Toolbar
+        self.toolbar.addAction(self.action_resource_browser)
 
         # -- Help menu
 
@@ -108,8 +120,6 @@ class QgisHubPluginPlugin:
             self.action_help_plugin_menu_documentation
         )
 
-    
-
     def tr(self, message: str) -> str:
         """Get the translation for a string using Qt translation API.
 
@@ -126,15 +136,19 @@ class QgisHubPluginPlugin:
         # -- Clean up menu
         self.iface.removePluginMenu(__title__, self.action_help)
         self.iface.removePluginMenu(__title__, self.action_settings)
+        self.iface.removePluginMenu(__title__, self.action_resource_browser)
+
+        self.iface.removeToolBarIcon(self.action_resource_browser)
+        self.iface.mainWindow().removeToolBar(self.toolbar)
+        del self.toolbar
 
         # -- Clean up preferences panel in QGIS settings
         self.iface.unregisterOptionsWidgetFactory(self.options_factory)
 
-        
-
         # remove actions
         del self.action_settings
         del self.action_help
+        del self.action_resource_browser
 
     def run(self):
         """Main process.
@@ -149,7 +163,10 @@ class QgisHubPluginPlugin:
             )
         except Exception as err:
             self.log(
-                message=self.tr("Houston, we've got a problem: {}".format(err)),
+                message=self.tr(f"Houston, we've got a problem: {err}"),
                 log_level=2,
                 push=True,
             )
+
+    def _open_resource_browser_dialog(self):
+        self.log("_open_resource_browser_dialog")

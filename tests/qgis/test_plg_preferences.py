@@ -37,6 +37,7 @@ class TestPlgPreferences(unittest.TestCase):
         self.assertIsInstance(settings.version, str)
         self.assertEqual(settings.version, __version__)
 
+
 # ############################################################################
 # ####### Stand-alone run ########
 # ################################
