@@ -23,6 +23,7 @@ from qgis_hub_plugin.__about__ import (
     __uri_homepage__,
 )
 from qgis_hub_plugin.gui.dlg_settings import PlgOptionsFactory
+from qgis_hub_plugin.gui.resource_browser import ResourceBrowserDialog
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import get_icon
 
@@ -170,3 +171,8 @@ class QgisHubPluginPlugin:
 
     def _open_resource_browser_dialog(self):
         self.log("_open_resource_browser_dialog")
+        dialog = ResourceBrowserDialog(
+            self.iface.mainWindow(),
+            self.iface,
+        )
+        dialog.show()
