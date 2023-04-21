@@ -1,7 +1,7 @@
 import os
 
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QSize
+from qgis.PyQt.QtCore import QSize, Qt
 from qgis.PyQt.QtGui import QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import QDialog
 
@@ -40,7 +40,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.log(f"{total}, {previous_url}, {next_url}")
 
         for resource in resources:
-            item = _create_resource_item(resource)
+            item = ResourceItem(resource)
             self.resource_model.appendRow(item)
 
 
@@ -50,10 +50,22 @@ def shorten_string(text: str) -> str:
     return text
 
 
-def _create_resource_item(params: dict):
-    name = shorten_string(params.get("name"))
-    item = QStandardItem(name)
-    item.setToolTip(f'{params.get("name")} by {params.get("creator")}')
-    # TODO(IS): Use different icon for different resource type or use the preview
-    item.setIcon(get_icon("qbrowser_icon.svg"))
-    return item
+class ResourceItem(QStandardItem):
+    def __init__(self, params: dict):
+        super().__init__()
+
+        # Attribute from the QGIS Hub
+        self.resource_type = params.get("resource_type")
+        self.uuid = params.get("uuid")
+        self.name = params.get("name")
+        self.creator = params.get("name")
+        self.upload_time = params.get("upload_date")
+        self.description = params.get("description")
+        self.file = params.get("file")
+        self.thumbnail = params.get("thumbnail")
+
+        # Custom attribute
+        self.setText(shorten_string(self.name))
+        self.setToolTip(f"{self.name} by {self.creator}")
+        # TODO(IS): Use different icon for different resource type or use the preview
+        self.setIcon(get_icon("qbrowser_icon.svg"))
