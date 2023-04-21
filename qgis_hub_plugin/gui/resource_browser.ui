@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>710</width>
-    <height>449</height>
+    <height>411</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -49,6 +49,13 @@
         </layout>
        </widget>
       </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="labelResourceType">
+        <property name="text">
+         <string>Resource Type</string>
+        </property>
+       </widget>
+      </item>
       <item row="1" column="1">
        <widget class="QComboBox" name="comboBox">
         <property name="sizePolicy">
@@ -59,23 +66,31 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="labelResourceType">
-        <property name="text">
-         <string>Resource Type</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
    <item>
-    <widget class="QTreeView" name="treeViewResources">
+    <widget class="QListView" name="listViewResources">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="sizeAdjustPolicy">
+      <enum>QAbstractScrollArea::AdjustIgnored</enum>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="resizeMode">
+      <enum>QListView::Adjust</enum>
+     </property>
+     <property name="viewMode">
+      <enum>QListView::IconMode</enum>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
