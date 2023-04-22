@@ -156,7 +156,7 @@
           </widget>
          </item>
          <item row="1" column="0">
-          <widget class="QLabel" name="label">
+          <widget class="QLabel" name="labelNameLabel">
            <property name="text">
             <string>Name</string>
            </property>
@@ -170,7 +170,7 @@
           </widget>
          </item>
          <item row="2" column="0">
-          <widget class="QLabel" name="label_4">
+          <widget class="QLabel" name="labelTypeLabel">
            <property name="text">
             <string>Type</string>
            </property>
@@ -184,7 +184,7 @@
           </widget>
          </item>
          <item row="3" column="0">
-          <widget class="QLabel" name="label_5">
+          <widget class="QLabel" name="labelSubtypeLabel">
            <property name="text">
             <string>Subtype</string>
            </property>
@@ -198,7 +198,7 @@
           </widget>
          </item>
          <item row="4" column="0">
-          <widget class="QLabel" name="label_2">
+          <widget class="QLabel" name="labelCreatorLabel">
            <property name="text">
             <string>Creator</string>
            </property>
@@ -212,7 +212,7 @@
           </widget>
          </item>
          <item row="5" column="0">
-          <widget class="QLabel" name="label_3">
+          <widget class="QLabel" name="labelDescriptionLabel">
            <property name="text">
             <string>Description</string>
            </property>
@@ -236,6 +236,9 @@
             <enum>Qt::ScrollBarAsNeeded</enum>
            </property>
            <property name="readOnly">
+            <bool>true</bool>
+           </property>
+           <property name="openExternalLinks">
             <bool>true</bool>
            </property>
           </widget>

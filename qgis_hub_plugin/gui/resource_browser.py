@@ -83,7 +83,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Description
         self.labelName.setText(resource.name)
         self.labelType.setText(resource.resource_type)
-        self.labelSubtype.setText(resource.resource_subtype)
+        self.log(resource.resource_subtype)
+        self.labelSubtype.setVisible(bool(resource.resource_subtype))
+        self.labelSubtypeLabel.setVisible(bool(resource.resource_subtype))
+        if not resource.resource_subtype:
+            self.labelSubtype.setText(resource.resource_subtype)
         self.labelCreator.setText(resource.creator)
         self.textBrowserDescription.setHtml(resource.description)
 
