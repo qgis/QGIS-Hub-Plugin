@@ -36,7 +36,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.on_resource_selecton_changed
         )
         # TODO(IS): make user able to change the icon size
-        self.listViewResources.setIconSize(QSize(64, 64))
+        self.listViewResources.setIconSize(QSize(96, 96))
 
         # Load resource for the first time
         self.populate_resources()
@@ -61,7 +61,6 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if self.selected_resource():
             self.update_preview()
         else:
-            # No construction phase is selected thus remove all selection of main cable
             self.log("no resource selected")
 
     def selected_resource(self):
