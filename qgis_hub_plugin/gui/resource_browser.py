@@ -36,18 +36,19 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.on_resource_selecton_changed
         )
         # TODO(IS): make user able to change the icon size
-        self.listViewResources.setIconSize(QSize(96, 96))
+        self.listViewResources.setIconSize(QSize(64, 64))
 
         # Load resource for the first time
         self.populate_resources()
 
+        self.hide_preview()
+
     def populate_resources(self):
         response = get_all_resources()
-        total = response.get("total")
-        previous_url = response.get("previous")
-        next_url = response.get("next")
+        # total = response.get("total")
+        # previous_url = response.get("previous")
+        # next_url = response.get("next")
         resources = response.get("results", {})
-        self.log(f"{total}, {previous_url}, {next_url}")
 
         for resource in resources:
             item = ResourceItem(resource)
@@ -56,9 +57,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selecton_changed(self, selected, deselected):
         if self.selected_resource():
-            selected_resource = self.selected_resource()
             self.update_preview()
-            self.log(f"selected resource: {selected_resource.name}")
         else:
             # No construction phase is selected thus remove all selection of main cable
             self.log("no resource selected")
@@ -67,14 +66,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
         if len(selected_indexes) > 0:
             return self.resource_model.itemFromIndex(selected_indexes[0])
+        else:
+            return None
 
     def update_preview(self):
         resource = self.selected_resource()
+        if resource is None:
+            self.hide_preview()
+            return
+        self.show_preview()
+
         # Thumbnail
         thumbnail_path = download_resource_thumbnail(resource.thumbnail, resource.uuid)
-        pm = QPixmap(str(thumbnail_path.absolute()))
-        if not pm.isNull():
-            item = QGraphicsPixmapItem(pm)
+        pixmap = QPixmap(str(thumbnail_path.absolute()))
+        if not pixmap.isNull():
+            item = QGraphicsPixmapItem(pixmap)
 
         self.graphicsViewPreview.scene().clear()
         self.graphicsViewPreview.scene().addItem(item)
@@ -83,13 +89,18 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Description
         self.labelName.setText(resource.name)
         self.labelType.setText(resource.resource_type)
-        self.log(resource.resource_subtype)
         self.labelSubtype.setVisible(bool(resource.resource_subtype))
         self.labelSubtypeLabel.setVisible(bool(resource.resource_subtype))
         if not resource.resource_subtype:
             self.labelSubtype.setText(resource.resource_subtype)
         self.labelCreator.setText(resource.creator)
         self.textBrowserDescription.setHtml(resource.description)
+
+    def hide_preview(self):
+        self.groupBoxPreview.hide()
+
+    def show_preview(self):
+        self.groupBoxPreview.show()
 
 
 def download_resource_thumbnail(url: str, uuid: str):
@@ -135,5 +146,5 @@ class ResourceItem(QStandardItem):
         # Custom attribute
         self.setText(shorten_string(self.name))
         self.setToolTip(f"{self.name} by {self.creator}")
-        # TODO(IS): Use different icon for different resource type or use the preview
+        # TODO(IS): Use different icon for different resource type or use the thumbnail
         self.setIcon(get_icon("qbrowser_icon.svg"))
