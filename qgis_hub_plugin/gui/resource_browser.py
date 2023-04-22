@@ -69,11 +69,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             return self.resource_model.itemFromIndex(selected_indexes[0])
 
     def update_preview(self):
-        selected_resource = self.selected_resource()
+        resource = self.selected_resource()
         # Thumbnail
-        thumbnail_path = download_resource_thumbnail(
-            selected_resource.thumbnail, selected_resource.uuid
-        )
+        thumbnail_path = download_resource_thumbnail(resource.thumbnail, resource.uuid)
         pm = QPixmap(str(thumbnail_path.absolute()))
         if not pm.isNull():
             item = QGraphicsPixmapItem(pm)
@@ -83,6 +81,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
 
         # Description
+        self.labelName.setText(resource.name)
+        self.labelType.setText(resource.resource_type)
+        self.labelSubtype.setText(resource.resource_subtype)
+        self.labelCreator.setText(resource.creator)
+        self.textBrowserDescription.setHtml(resource.description)
 
 
 def download_resource_thumbnail(url: str, uuid: str):
@@ -116,6 +119,7 @@ class ResourceItem(QStandardItem):
 
         # Attribute from the QGIS Hub
         self.resource_type = params.get("resource_type")
+        self.resource_subtype = params.get("resource_subtype", "")
         self.uuid = params.get("uuid")
         self.name = params.get("name")
         self.creator = params.get("name")
