@@ -1,14 +1,15 @@
 import os
+from pathlib import Path
 
-import requests
+from qgis.core import QgsApplication
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QSize, Qt, pyqtSlot
 from qgis.PyQt.QtGui import QPixmap, QStandardItem, QStandardItemModel
-from qgis.PyQt.QtWidgets import QDialog
+from qgis.PyQt.QtWidgets import QDialog, QGraphicsPixmapItem, QGraphicsScene
 
 from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.toolbelt import PlgLogger
-from qgis_hub_plugin.utilities.common import download_image, get_icon
+from qgis_hub_plugin.utilities.common import download_file, get_icon
 
 UI_CLASS = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), "resource_browser.ui")
@@ -22,6 +23,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.parent = parent
         self.iface = iface
         self.log = PlgLogger().log
+
+        self.graphicsScene = QGraphicsScene()
+        self.graphicsViewPreview.setScene(self.graphicsScene)
 
         # Resources
         self.resource_model = QStandardItemModel(self.listViewResources)
@@ -67,24 +71,37 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def update_preview(self):
         selected_resource = self.selected_resource()
         # Thumbnail
-        # TODO: save it as a file (caching)
-        image_path = f"/home/ismailsunni/Downloads/{selected_resource.uuid}.{selected_resource.thumbnail.split('.')[-1]}"
-        self.log(image_path)
+        thumbnail_path = download_resource_thumbnail(
+            selected_resource.thumbnail, selected_resource.uuid
+        )
+        pm = QPixmap(str(thumbnail_path.absolute()))
+        if not pm.isNull():
+            item = QGraphicsPixmapItem(pm)
 
-        if not os.path.exists(image_path):
-            download_image(
-                selected_resource.thumbnail,
-                image_path,
-            )
-
-        # data = requests.get(selected_resource.thumbnail)
-        pixmap = QPixmap()
-        pixmap.load(image_path)
-        pixmap.scaled(256, 256, Qt.KeepAspectRatio)
-        # pixmap.loadFromData(data.content)
-        self.labelIResourcePreview.setPixmap(pixmap)
+        self.graphicsViewPreview.scene().clear()
+        self.graphicsViewPreview.scene().addItem(item)
+        self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
 
         # Description
+
+
+def download_resource_thumbnail(url: str, uuid: str):
+    qgis_user_dir = QgsApplication.qgisSettingsDirPath()
+    # Assume it as jpg
+    extension = ".jpg"
+    try:
+        extension = url.split(".")[-1]
+    except IndexError():
+        pass
+
+    thumbnail_dir = Path(qgis_user_dir, "qgis_hub", "thumbnails")
+    thumbnail_path = Path(thumbnail_dir, f"{uuid}.{extension}")
+    if not thumbnail_dir.exists():
+        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+
+    download_file(url, thumbnail_path)
+    if thumbnail_path.exists():
+        return thumbnail_path
 
 
 def shorten_string(text: str) -> str:
