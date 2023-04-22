@@ -1,10 +1,17 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 from qgis.core import Qgis, QgsApplication
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QSize, Qt, pyqtSlot
-from qgis.PyQt.QtGui import QPixmap, QStandardItem, QStandardItemModel
+from qgis.PyQt.QtCore import QSize, Qt, QUrl, pyqtSlot
+from qgis.PyQt.QtGui import (
+    QDesktopServices,
+    QIcon,
+    QPixmap,
+    QStandardItem,
+    QStandardItemModel,
+)
 from qgis.PyQt.QtWidgets import QDialog, QGraphicsPixmapItem, QGraphicsScene
 
 from qgis_hub_plugin.core.api_client import get_all_resources
@@ -92,9 +99,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.labelType.setText(resource.resource_type)
         self.labelSubtype.setVisible(bool(resource.resource_subtype))
         self.labelSubtypeLabel.setVisible(bool(resource.resource_subtype))
-        if not resource.resource_subtype:
+        if resource.resource_subtype:
             self.labelSubtype.setText(resource.resource_subtype)
         self.labelCreator.setText(resource.creator)
+        self.labelDownloadCount.setText(str(resource.download_count))
+        pretty_upload_date = resource.upload_date.strftime("%-d %B %Y")
+        self.labelUploaded.setText(pretty_upload_date)
         self.textBrowserDescription.setHtml(resource.description)
 
     def hide_preview(self):
@@ -111,6 +121,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if file_path:
             text = f"Successfully download {resource.name} to {file_path}"
             self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
+            if self.checkBoxOpenDirectory.isChecked():
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(file_path.parent)))
         else:
             text = f"Failed download {resource.name} from {resource.file}"
             self.iface.messageBar().pushMessage(
@@ -167,7 +179,9 @@ class ResourceItem(QStandardItem):
         self.uuid = params.get("uuid")
         self.name = params.get("name")
         self.creator = params.get("name")
-        self.upload_time = params.get("upload_date")
+        upload_date_string = params.get("upload_date")
+        self.upload_date = datetime.fromisoformat(upload_date_string)
+        self.download_count = params.get("download_count")
         self.description = params.get("description")
         self.file = params.get("file")
         self.thumbnail = params.get("thumbnail")
@@ -175,5 +189,8 @@ class ResourceItem(QStandardItem):
         # Custom attribute
         self.setText(shorten_string(self.name))
         self.setToolTip(f"{self.name} by {self.creator}")
-        # TODO(IS): Use different icon for different resource type or use the thumbnail
-        self.setIcon(get_icon("qbrowser_icon.svg"))
+        thumbnail_path = download_resource_thumbnail(self.thumbnail, self.uuid)
+        if thumbnail_path:
+            self.setIcon(QIcon(str(thumbnail_path)))
+        else:
+            self.setIcon(get_icon("qbrowser_icon.svg"))
