@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from qgis.core import QgsApplication
+from qgis.core import Qgis, QgsApplication
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QSize, Qt, pyqtSlot
 from qgis.PyQt.QtGui import QPixmap, QStandardItem, QStandardItemModel
@@ -40,6 +40,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Load resource for the first time
         self.populate_resources()
+
+        self.pushButtonDownload.clicked.connect(self.download_resource)
 
         self.hide_preview()
 
@@ -101,6 +103,34 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def show_preview(self):
         self.groupBoxPreview.show()
+
+    def download_resource(self):
+        resource = self.selected_resource()
+        file_path = download_resource_file(
+            resource.file, resource.resource_type, resource.uuid
+        )
+        if file_path:
+            text = f"Successfully download {resource.name} to {file_path}"
+            self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
+        else:
+            text = f"Failed download {resource.name} from {resource.file}"
+            self.iface.messageBar().pushMessage(
+                self.tr("Warning"), text, level=Qgis.Warning, duration=5
+            )
+
+
+# TODO: do it QGIS task to have
+def download_resource_file(url: str, resource_type: str, uuid: str):
+    qgis_user_dir = QgsApplication.qgisSettingsDirPath()
+    download_dir = Path(qgis_user_dir, "qgis_hub", "downloads", resource_type)
+    file_name = url.split("/")[-1]
+    resource_path = Path(download_dir, file_name)
+    if not download_dir.exists():
+        download_dir.mkdir(parents=True, exist_ok=True)
+
+    download_file(url, resource_path)
+    if resource_path.exists():
+        return resource_path
 
 
 def download_resource_thumbnail(url: str, uuid: str):
