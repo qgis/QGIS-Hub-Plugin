@@ -17,7 +17,6 @@ from qgis.PyQt.QtGui import QDesktopServices, QIcon
 
 # project
 from qgis_hub_plugin.__about__ import (
-    DIR_PLUGIN_ROOT,
     __icon_path__,
     __title__,
     __uri_homepage__,

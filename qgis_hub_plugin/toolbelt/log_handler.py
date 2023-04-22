@@ -12,8 +12,8 @@ from qgis.PyQt.QtWidgets import QPushButton, QWidget
 from qgis.utils import iface
 
 # project package
-from qgis_hub_plugin.__about__ import __title__
 import qgis_hub_plugin.toolbelt.preferences as plg_prefs_hdlr
+from qgis_hub_plugin.__about__ import __title__
 
 # ############################################################################
 # ########## Classes ###############
