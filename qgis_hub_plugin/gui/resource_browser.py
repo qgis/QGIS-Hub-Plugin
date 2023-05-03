@@ -14,7 +14,7 @@ from qgis.PyQt.QtGui import (
 )
 from qgis.PyQt.QtWidgets import QDialog, QGraphicsPixmapItem, QGraphicsScene
 
-from qgis_hub_plugin.core.api_client import get_all_resources
+from qgis_hub_plugin.core.api_client import get_all_resources, reload_resources
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import download_file, get_icon
 
@@ -50,6 +50,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
+        self.reloadPushButton.clicked.connect(self.reload_resources)
+
         self.hide_preview()
 
     def populate_resources(self):
@@ -59,6 +61,15 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # next_url = response.get("next")
         resources = response.get("results", {})
 
+        for resource in resources:
+            item = ResourceItem(resource)
+            self.resource_model.appendRow(item)
+
+    def reload_resources(self):
+        response = reload_resources()
+        resources = response.get("results", {})
+
+        self.resource_model.clear()
         for resource in resources:
             item = ResourceItem(resource)
             self.resource_model.appendRow(item)
