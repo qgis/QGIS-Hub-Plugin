@@ -178,7 +178,7 @@ class ResourceItem(QStandardItem):
         self.resource_subtype = params.get("resource_subtype", "")
         self.uuid = params.get("uuid")
         self.name = params.get("name")
-        self.creator = params.get("name")
+        self.creator = params.get("creator")
         upload_date_string = params.get("upload_date")
         self.upload_date = datetime.fromisoformat(upload_date_string)
         self.download_count = params.get("download_count")
