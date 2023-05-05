@@ -27,9 +27,11 @@ class TestApiClient(unittest.TestCase):
 
     def test_get_all_resources(self):
         response = get_all_resources()
-        print(response)
-        self.assertEqual(response.get("total"), 160)
         self.assertIsNotNone(response)
+        self.assertGreater(response.get("total"), 160)
+        print(response.get("total"))
+        # If this issue failed, we have to update the API limit
+        self.assertIsNone(response.get("next"))
 
 
 # ############################################################################
