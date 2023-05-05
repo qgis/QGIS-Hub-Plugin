@@ -3,3 +3,5 @@
 
 pytest-cov>=3,<4
 packaging>=23
+
+requests>=2.25.1
