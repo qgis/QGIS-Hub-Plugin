@@ -27,7 +27,3 @@ def get_all_resources(params: dict = {}, force_update=False):
         json.dump(response.json(), f)
 
     return response.json()
-
-
-def reload_resources():
-    return get_all_resources(force_update=True)
