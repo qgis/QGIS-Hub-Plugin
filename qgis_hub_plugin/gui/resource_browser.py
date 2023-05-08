@@ -35,6 +35,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.graphicsViewPreview.setScene(self.graphicsScene)
 
         # Resources
+        self.resources = []
         self.resource_model = QStandardItemModel(self.listViewResources)
         self.listViewResources.setModel(self.resource_model)
 
@@ -50,6 +51,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
+        self.checkBoxGeopackage.stateChanged.connect(
+            lambda: self.populate_resources(force_update=False)
+        )
+        self.checkBoxStyle.stateChanged.connect(
+            lambda: self.populate_resources(force_update=False)
+        )
+        self.checkBoxModel.stateChanged.connect(
+            lambda: self.populate_resources(force_update=False)
+        )
+
         self.reloadToolButton.setIcon(
             QIcon(":/images/themes/default/mActionRefresh.svg")
         )
@@ -60,15 +71,27 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.hide_preview()
 
     def populate_resources(self, force_update=False):
-        response = get_all_resources(force_update=force_update)
-        # total = response.get("total")
-        # previous_url = response.get("previous")
-        # next_url = response.get("next")
-        resources = response.get("results", {})
+        if force_update or not self.resources:
+            response = get_all_resources(force_update=force_update)
+            # total = response.get("total")
+            # previous_url = response.get("previous")
+            # next_url = response.get("next")
+            self.resources = response.get("results", {})
+
+        geopackage_checked = self.checkBoxGeopackage.isChecked()
+        style_checked = self.checkBoxStyle.isChecked()
+        model_checked = self.checkBoxModel.isChecked()
+
+        filtered_resources = [
+            ResourceItem(r)
+            for r in self.resources
+            if (geopackage_checked and r["resource_type"] == "Geopackage")
+            or (style_checked and r["resource_type"] == "Style")
+            or (model_checked and r["resource_type"] == "Model")
+        ]
 
         self.resource_model.clear()
-        for resource in resources:
-            item = ResourceItem(resource)
+        for item in filtered_resources:
             self.resource_model.appendRow(item)
 
     @pyqtSlot("QItemSelection", "QItemSelection")
