@@ -50,6 +50,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
+        self.reloadToolButton.setIcon(
+            QIcon(":/images/themes/default/mActionRefresh.svg")
+        )
         self.reloadToolButton.clicked.connect(
             lambda: self.populate_resources(force_update=True)
         )
