@@ -9,7 +9,7 @@ BASE_URL = "https://plugins.qgis.org/api/v1/resources/"
 
 def get_all_resources(params: dict = {}, force_update=False):
     params["format"] = "json"
-    params["limit"] = 200  # hardcoded to get all resource, currently only 160
+    params["limit"] = 1000  # hardcoded to get all resource, currently only ~160
 
     # Check if the response file exits
     response_folder = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
