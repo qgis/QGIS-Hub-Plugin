@@ -4,7 +4,7 @@ from pathlib import Path
 
 from qgis.core import Qgis, QgsApplication
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QSize, Qt, QUrl, pyqtSlot
+from qgis.PyQt.QtCore import QRegExp, QSize, QSortFilterProxyModel, Qt, QUrl, pyqtSlot
 from qgis.PyQt.QtGui import (
     QDesktopServices,
     QIcon,
@@ -37,12 +37,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Resources
         self.resources = []
         self.resource_model = QStandardItemModel(self.listViewResources)
-        self.listViewResources.setModel(self.resource_model)
+
+        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model.setSourceModel(self.resource_model)
+        self.listViewResources.setModel(self.proxy_model)
 
         self.resource_selection_model = self.listViewResources.selectionModel()
         self.resource_selection_model.selectionChanged.connect(
-            self.on_resource_selecton_changed
+            self.on_resource_selection_changed
         )
+
         # TODO(IS): make user able to change the icon size
         self.listViewResources.setIconSize(QSize(96, 96))
 
@@ -52,14 +56,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
         self.checkBoxGeopackage.stateChanged.connect(
-            lambda: self.populate_resources(force_update=False)
+            lambda: self.update_resource_filter()
         )
-        self.checkBoxStyle.stateChanged.connect(
-            lambda: self.populate_resources(force_update=False)
-        )
-        self.checkBoxModel.stateChanged.connect(
-            lambda: self.populate_resources(force_update=False)
-        )
+        self.checkBoxStyle.stateChanged.connect(lambda: self.update_resource_filter())
+        self.checkBoxModel.stateChanged.connect(lambda: self.update_resource_filter())
 
         self.reloadToolButton.setIcon(
             QIcon(":/images/themes/default/mActionRefresh.svg")
@@ -78,24 +78,31 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             # next_url = response.get("next")
             self.resources = response.get("results", {})
 
+        self.resource_model.clear()
+        for resource in self.resources:
+            item = ResourceItem(resource)
+            self.resource_model.appendRow(item)
+
+    def update_resource_filter(self):
         geopackage_checked = self.checkBoxGeopackage.isChecked()
         style_checked = self.checkBoxStyle.isChecked()
         model_checked = self.checkBoxModel.isChecked()
 
-        filtered_resources = [
-            ResourceItem(r)
-            for r in self.resources
-            if (geopackage_checked and r["resource_type"] == "Geopackage")
-            or (style_checked and r["resource_type"] == "Style")
-            or (model_checked and r["resource_type"] == "Model")
-        ]
+        filter_exp = ["NONE"]
+        if geopackage_checked:
+            filter_exp.append("Geopackage")
+        if style_checked:
+            filter_exp.append("Style")
+        if model_checked:
+            filter_exp.append("Model")
 
-        self.resource_model.clear()
-        for item in filtered_resources:
-            self.resource_model.appendRow(item)
+        filter_regexp = QRegExp("|".join(filter_exp), Qt.CaseInsensitive)
+
+        self.proxy_model.setFilterRegExp(filter_regexp)
+        self.proxy_model.setFilterRole(ResourceItem.ResourceTypeRole)
 
     @pyqtSlot("QItemSelection", "QItemSelection")
-    def on_resource_selecton_changed(self, selected, deselected):
+    def on_resource_selection_changed(self, selected, deselected):
         if self.selected_resource():
             self.update_preview()
         else:
@@ -104,7 +111,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def selected_resource(self):
         selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
         if len(selected_indexes) > 0:
-            return self.resource_model.itemFromIndex(selected_indexes[0])
+            proxy_index = selected_indexes[0]
+            source_index = self.proxy_model.mapToSource(proxy_index)
+            return self.resource_model.itemFromIndex(source_index)
         else:
             return None
 
@@ -201,6 +210,8 @@ def shorten_string(text: str) -> str:
 
 
 class ResourceItem(QStandardItem):
+    ResourceTypeRole = Qt.UserRole + 1
+
     def __init__(self, params: dict):
         super().__init__()
 
@@ -225,3 +236,5 @@ class ResourceItem(QStandardItem):
             self.setIcon(QIcon(str(thumbnail_path)))
         else:
             self.setIcon(get_icon("qbrowser_icon.svg"))
+
+        self.setData(self.resource_type, self.ResourceTypeRole)
