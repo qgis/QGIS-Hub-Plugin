@@ -53,6 +53,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Load resource for the first time
         self.populate_resources()
 
+        self.lineEditSearch.textChanged.connect(self.on_filter_text_changed)
+
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
         self.checkBoxGeopackage.stateChanged.connect(
@@ -100,6 +102,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.proxy_model.setFilterRegExp(filter_regexp)
         self.proxy_model.setFilterRole(ResourceItem.ResourceTypeRole)
+
+    def on_filter_text_changed(self, text):
+        self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
+        self.proxy_model.setFilterRole(ResourceItem.NameRole)
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
@@ -211,6 +217,7 @@ def shorten_string(text: str) -> str:
 
 class ResourceItem(QStandardItem):
     ResourceTypeRole = Qt.UserRole + 1
+    NameRole = Qt.UserRole + 2
 
     def __init__(self, params: dict):
         super().__init__()
@@ -238,3 +245,4 @@ class ResourceItem(QStandardItem):
             self.setIcon(get_icon("qbrowser_icon.svg"))
 
         self.setData(self.resource_type, self.ResourceTypeRole)
+        self.setData(self.name, self.NameRole)
