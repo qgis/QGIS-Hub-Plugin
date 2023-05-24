@@ -38,7 +38,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.resources = []
         self.resource_model = QStandardItemModel(self.listViewResources)
 
-        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
         self.listViewResources.setModel(self.proxy_model)
 
@@ -99,13 +99,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             filter_exp.append("Model")
 
         filter_regexp = QRegExp("|".join(filter_exp), Qt.CaseInsensitive)
-
         self.proxy_model.setFilterRegExp(filter_regexp)
-        self.proxy_model.setFilterRole(ResourceItem.ResourceTypeRole)
+        self.proxy_model.setRolesToFilter([ResourceItem.ResourceTypeRole])
 
     def on_filter_text_changed(self, text):
         self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
-        self.proxy_model.setFilterRole(ResourceItem.NameRole)
+        self.proxy_model.setRolesToFilter(
+            [ResourceItem.NameRole, ResourceItem.CreatorRole]
+        )
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
@@ -218,6 +219,7 @@ def shorten_string(text: str) -> str:
 class ResourceItem(QStandardItem):
     ResourceTypeRole = Qt.UserRole + 1
     NameRole = Qt.UserRole + 2
+    CreatorRole = Qt.UserRole + 3
 
     def __init__(self, params: dict):
         super().__init__()
@@ -246,3 +248,27 @@ class ResourceItem(QStandardItem):
 
         self.setData(self.resource_type, self.ResourceTypeRole)
         self.setData(self.name, self.NameRole)
+        self.setData(self.creator, self.CreatorRole)
+
+
+class MultiRoleFilterProxyModel(QSortFilterProxyModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.roles_to_filter = []
+
+    def setRolesToFilter(self, roles):
+        self.roles_to_filter = roles
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        model = self.sourceModel()
+        if not self.roles_to_filter:
+            return True
+
+        for role in self.roles_to_filter:
+            index = model.index(source_row, 0, source_parent)
+            data = model.data(index, role)
+            if self.filterRegExp().indexIn(data) != -1:
+                return True
+
+        return False
