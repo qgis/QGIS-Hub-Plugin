@@ -15,6 +15,7 @@ from qgis.PyQt.QtGui import (
 from qgis.PyQt.QtWidgets import QDialog, QGraphicsPixmapItem, QGraphicsScene
 
 from qgis_hub_plugin.core.api_client import get_all_resources
+from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import download_file, get_icon
 
@@ -62,11 +63,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
-        self.checkBoxGeopackage.stateChanged.connect(
-            lambda: self.update_resource_filter()
-        )
-        self.checkBoxStyle.stateChanged.connect(lambda: self.update_resource_filter())
-        self.checkBoxModel.stateChanged.connect(lambda: self.update_resource_filter())
+        self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
+        self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
+        self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
 
         self.reloadToolButton.setIcon(
             QIcon(":/images/themes/default/mActionRefresh.svg")
@@ -264,39 +263,3 @@ class ResourceItem(QStandardItem):
         self.setData(self.resource_type, self.ResourceTypeRole)
         self.setData(self.name, self.NameRole)
         self.setData(self.creator, self.CreatorRole)
-
-
-class MultiRoleFilterProxyModel(QSortFilterProxyModel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.roles_to_filter = []
-        self.checkbox_states = {}
-
-    def setRolesToFilter(self, roles):
-        self.roles_to_filter = roles
-        self.invalidateFilter()
-
-    def setCheckboxStates(self, checkbox_states):
-        self.checkbox_states = checkbox_states
-        self.invalidateFilter()
-
-    def filterAcceptsRow(self, source_row, source_parent):
-        model = self.sourceModel()
-        if not self.roles_to_filter or not self.checkbox_states:
-            return True
-
-        index = model.index(source_row, 0, source_parent)
-        resource_type = model.data(index, ResourceItem.ResourceTypeRole)
-        if resource_type not in self.checkbox_states:
-            return False
-
-        checkbox_checked = self.checkbox_states[resource_type]
-        if not checkbox_checked:
-            return False
-
-        for role in self.roles_to_filter:
-            data = model.data(index, role)
-            if self.filterRegExp().indexIn(data) != -1:
-                return True
-
-        return False
