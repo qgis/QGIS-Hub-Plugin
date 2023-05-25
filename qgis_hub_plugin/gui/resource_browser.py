@@ -36,6 +36,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Resources
         self.resources = []
+        self.checkbox_states = {}
         self.resource_model = QStandardItemModel(self.listViewResources)
 
         self.proxy_model = MultiRoleFilterProxyModel()
@@ -89,6 +90,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         geopackage_checked = self.checkBoxGeopackage.isChecked()
         style_checked = self.checkBoxStyle.isChecked()
         model_checked = self.checkBoxModel.isChecked()
+        current_text = self.lineEditSearch.text()
+
+        self.checkbox_states = {
+            "Geopackage": geopackage_checked,
+            "Style": style_checked,
+            "Model": model_checked,
+        }
 
         filter_exp = ["NONE"]
         if geopackage_checked:
@@ -101,12 +109,15 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         filter_regexp = QRegExp("|".join(filter_exp), Qt.CaseInsensitive)
         self.proxy_model.setFilterRegExp(filter_regexp)
         self.proxy_model.setRolesToFilter([ResourceItem.ResourceTypeRole])
+        self.proxy_model.setCheckboxStates(self.checkbox_states)
+        self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
         self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
         self.proxy_model.setRolesToFilter(
             [ResourceItem.NameRole, ResourceItem.CreatorRole]
         )
+        self.proxy_model.setCheckboxStates(self.checkbox_states)
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
@@ -255,18 +266,31 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.roles_to_filter = []
+        self.checkbox_states = {}
 
     def setRolesToFilter(self, roles):
         self.roles_to_filter = roles
         self.invalidateFilter()
 
+    def setCheckboxStates(self, checkbox_states):
+        self.checkbox_states = checkbox_states
+        self.invalidateFilter()
+
     def filterAcceptsRow(self, source_row, source_parent):
         model = self.sourceModel()
-        if not self.roles_to_filter:
+        if not self.roles_to_filter or not self.checkbox_states:
             return True
 
+        index = model.index(source_row, 0, source_parent)
+        resource_type = model.data(index, ResourceItem.ResourceTypeRole)
+        if resource_type not in self.checkbox_states:
+            return False
+
+        checkbox_checked = self.checkbox_states[resource_type]
+        if not checkbox_checked:
+            return False
+
         for role in self.roles_to_filter:
-            index = model.index(source_row, 0, source_parent)
             data = model.data(index, role)
             if self.filterRegExp().indexIn(data) != -1:
                 return True
