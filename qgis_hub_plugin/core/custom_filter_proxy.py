@@ -27,11 +27,7 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
             index, qgis_hub_plugin.gui.resource_browser.ResourceItem.ResourceTypeRole
         )
 
-        if resource_type not in self.checkbox_states:
-            return False
-
-        checkbox_checked = self.checkbox_states[resource_type]
-        if not checkbox_checked:
+        if not self.checkbox_states.get(resource_type, False):
             return False
 
         for role in self.roles_to_filter:
