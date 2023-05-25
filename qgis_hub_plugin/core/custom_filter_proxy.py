@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QRegExp, QSortFilterProxyModel
+from PyQt5.QtCore import QSortFilterProxyModel
 
 import qgis_hub_plugin.gui.resource_browser
 
