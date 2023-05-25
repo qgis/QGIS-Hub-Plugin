@@ -36,7 +36,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Resources
         self.resources = []
-        self.checkbox_states = {}
+        self.checkbox_states = {
+            "Geopackage": True,
+            "Style": True,
+            "Model": True,
+        }
         self.resource_model = QStandardItemModel(self.listViewResources)
 
         self.proxy_model = MultiRoleFilterProxyModel()
