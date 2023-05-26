@@ -15,6 +15,7 @@ from qgis.PyQt.QtGui import (
 from qgis.PyQt.QtWidgets import QDialog, QGraphicsPixmapItem, QGraphicsScene
 
 from qgis_hub_plugin.core.api_client import get_all_resources
+from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import download_file, get_icon
 
@@ -36,9 +37,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Resources
         self.resources = []
+        self.checkbox_states = {}
+        self.update_checkbox_states()
         self.resource_model = QStandardItemModel(self.listViewResources)
 
-        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
         self.listViewResources.setModel(self.proxy_model)
 
@@ -53,13 +56,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Load resource for the first time
         self.populate_resources()
 
+        self.lineEditSearch.textChanged.connect(self.on_filter_text_changed)
+
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
-        self.checkBoxGeopackage.stateChanged.connect(
-            lambda: self.update_resource_filter()
-        )
-        self.checkBoxStyle.stateChanged.connect(lambda: self.update_resource_filter())
-        self.checkBoxModel.stateChanged.connect(lambda: self.update_resource_filter())
+        self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
+        self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
+        self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
 
         self.reloadToolButton.setIcon(
             QIcon(":/images/themes/default/mActionRefresh.svg")
@@ -83,23 +86,39 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             item = ResourceItem(resource)
             self.resource_model.appendRow(item)
 
-    def update_resource_filter(self):
+    def update_checkbox_states(self):
         geopackage_checked = self.checkBoxGeopackage.isChecked()
         style_checked = self.checkBoxStyle.isChecked()
         model_checked = self.checkBoxModel.isChecked()
 
-        filter_exp = ["NONE"]
-        if geopackage_checked:
-            filter_exp.append("Geopackage")
-        if style_checked:
-            filter_exp.append("Style")
-        if model_checked:
-            filter_exp.append("Model")
+        self.checkbox_states = {
+            "Geopackage": geopackage_checked,
+            "Style": style_checked,
+            "Model": model_checked,
+        }
 
-        filter_regexp = QRegExp("|".join(filter_exp), Qt.CaseInsensitive)
+    def update_resource_filter(self):
+        current_text = self.lineEditSearch.text()
 
+        self.update_checkbox_states()
+
+        filter_regexp_parts = ["NONE"]
+        for resource_type, checked in self.checkbox_states.items():
+            if checked:
+                filter_regexp_parts.append(resource_type)
+
+        filter_regexp = QRegExp("|".join(filter_regexp_parts), Qt.CaseInsensitive)
         self.proxy_model.setFilterRegExp(filter_regexp)
-        self.proxy_model.setFilterRole(ResourceItem.ResourceTypeRole)
+        self.proxy_model.setRolesToFilter([ResourceItem.ResourceTypeRole])
+        self.proxy_model.setCheckboxStates(self.checkbox_states)
+        self.on_filter_text_changed(current_text)
+
+    def on_filter_text_changed(self, text):
+        self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
+        self.proxy_model.setRolesToFilter(
+            [ResourceItem.NameRole, ResourceItem.CreatorRole]
+        )
+        self.proxy_model.setCheckboxStates(self.checkbox_states)
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
@@ -211,6 +230,8 @@ def shorten_string(text: str) -> str:
 
 class ResourceItem(QStandardItem):
     ResourceTypeRole = Qt.UserRole + 1
+    NameRole = Qt.UserRole + 2
+    CreatorRole = Qt.UserRole + 3
 
     def __init__(self, params: dict):
         super().__init__()
@@ -238,3 +259,5 @@ class ResourceItem(QStandardItem):
             self.setIcon(get_icon("qbrowser_icon.svg"))
 
         self.setData(self.resource_type, self.ResourceTypeRole)
+        self.setData(self.name, self.NameRole)
+        self.setData(self.creator, self.CreatorRole)

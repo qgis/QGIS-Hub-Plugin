@@ -7,7 +7,9 @@ from qgis.core import QgsApplication
 BASE_URL = "https://plugins.qgis.org/api/v1/resources/"
 
 
-def get_all_resources(params: dict = {}, force_update=False):
+def get_all_resources(params=None, force_update=False):
+    if params is None:
+        params = {}
     params["format"] = "json"
     params["limit"] = 1000  # hardcoded to get all resource, currently only ~160
 
