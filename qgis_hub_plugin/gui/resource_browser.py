@@ -178,36 +178,37 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.groupBoxPreview.show()
 
     def download_resource(self):
-        # pydevd_pycharm.settrace('127.0.0.1', port=53100, stdoutToServer=True, stderrToServer=True)
         resource = self.selected_resource()
+        file_extension = os.path.splitext(resource.file)[1]
 
-        # Show file dialog to select the download directory
-        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
-        if directory:
-            file_path = download_resource_file(
-                resource.file, resource.resource_type, resource.uuid, directory
+        file_path = QFileDialog.getSaveFileName(
+            self, "Save Resource", "", f"All Files (*{file_extension})"
+        )[0]
+
+        if file_path:
+            full_file_path = file_path + file_extension
+            download_resource_file(
+                resource.file, resource.resource_type, resource.uuid, full_file_path
             )
-            if file_path:
-                text = f"Successfully download {resource.name} to {file_path}"
-                self.iface.messageBar().pushMessage(
-                    self.tr("Success"), text, duration=5
+            text = "Successfully downloaded {} to {}".format(
+                resource.name, full_file_path
+            )
+            self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
+            if self.checkBoxOpenDirectory.isChecked():
+                QDesktopServices.openUrl(
+                    QUrl.fromLocalFile(str(Path(file_path).parent))
                 )
-                if self.checkBoxOpenDirectory.isChecked():
-                    QDesktopServices.openUrl(QUrl.fromLocalFile(str(file_path.parent)))
-            else:
-                text = f"Failed download {resource.name} from {resource.file}"
-                self.iface.messageBar().pushMessage(
-                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
-                )
+        else:
+            text = "Downloaded canceled for %s" % resource.name
+            self.iface.messageBar().pushMessage(
+                self.tr("Warning"), text, level=Qgis.Warning, duration=5
+            )
 
 
 # TODO: do it QGIS task to have
 def download_resource_file(url: str, resource_type: str, uuid: str, directory: str):
-    file_name = url.split("/")[-1]
-    resource_path = Path(directory, file_name)
-
+    resource_path = Path(directory)
     download_file(url, resource_path)
-
     if resource_path.exists():
         return resource_path
 
