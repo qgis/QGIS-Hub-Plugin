@@ -194,20 +194,23 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if not file_path.endswith(file_extension):
                 file_path = file_path + file_extension
 
-            download_resource_file(resource.file, file_path)
-
-            text = self.tr(f"Successfully downloaded {resource.name} to {file_path}")
-
-            self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
-            if self.checkBoxOpenDirectory.isChecked():
-                QDesktopServices.openUrl(
-                    QUrl.fromLocalFile(str(Path(file_path).parent))
+            if not download_resource_file(resource.file, file_path):
+                text = self.tr(f"Download failed for {resource.name}")
+                self.iface.messageBar().pushMessage(
+                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
                 )
-        else:
-            text = self.tr(f"Download canceled for {resource.name}")
-            self.iface.messageBar().pushMessage(
-                self.tr("Warning"), text, level=Qgis.Warning, duration=5
-            )
+            else:
+                text = self.tr(
+                    f"Successfully downloaded {resource.name} to {file_path}"
+                )
+                self.iface.messageBar().pushMessage(
+                    self.tr("Success"), text, duration=5
+                )
+
+                if self.checkBoxOpenDirectory.isChecked():
+                    QDesktopServices.openUrl(
+                        QUrl.fromLocalFile(str(Path(file_path).parent))
+                    )
 
 
 # TODO: do it QGIS task to have
@@ -216,6 +219,8 @@ def download_resource_file(url: str, file_path: str):
     download_file(url, resource_path)
     if resource_path.exists():
         return resource_path
+    else:
+        return None
 
 
 def download_resource_thumbnail(url: str, uuid: str):
