@@ -65,6 +65,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
+        self.addQGISPushButton.clicked.connect(self.add_model_to_qgis)
+
         self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
         self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
@@ -148,6 +150,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             return
         self.show_preview()
 
+        if resource.resource_type == "Model":
+            self.addQGISPushButton.setVisible(True)
+        else:
+            self.addQGISPushButton.setVisible(False)
+
         # Thumbnail
         thumbnail_path = download_resource_thumbnail(resource.thumbnail, resource.uuid)
         pixmap = QPixmap(str(thumbnail_path.absolute()))
@@ -211,6 +218,38 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     QDesktopServices.openUrl(
                         QUrl.fromLocalFile(str(Path(file_path).parent))
                     )
+
+    def add_model_to_qgis(self):
+        resource = self.selected_resource()
+        qgis_user_dir = QgsApplication.qgisSettingsDirPath()
+        default_model_path = Path(qgis_user_dir, "processing", "models")
+        if not default_model_path.exists():
+            default_model_path.mkdir(parents=True, exist_ok=True)
+
+        default_model_path = os.path.join(
+            default_model_path, os.path.basename(resource.file)
+        )
+
+        file_path = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Save Model"),
+            str(default_model_path),
+            self.tr("QGIS Model (*.model3)"),
+        )[0]
+
+        if file_path:
+            if not download_resource_file(resource.file, file_path):
+                text = self.tr(f"Download failed for {resource.name}")
+                self.iface.messageBar().pushMessage(
+                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
+                )
+            else:
+                text = self.tr(
+                    f"Successfully downloaded {resource.name} to {file_path}"
+                )
+                self.iface.messageBar().pushMessage(
+                    self.tr("Success"), text, duration=5
+                )
 
 
 # TODO: do it QGIS task to have

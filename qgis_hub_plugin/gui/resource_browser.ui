@@ -237,7 +237,7 @@
            </property>
           </widget>
          </item>
-         <item row="9" column="0" colspan="2">
+         <item row="10" column="0" colspan="2">
           <widget class="QPushButton" name="pushButtonDownload">
            <property name="text">
             <string>Download</string>
@@ -248,6 +248,13 @@
           <widget class="QCheckBox" name="checkBoxOpenDirectory">
            <property name="text">
             <string>Open download directory</string>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="0" colspan="2">
+          <widget class="QPushButton" name="addQGISPushButton">
+           <property name="text">
+            <string>Add to QGIS</string>
            </property>
           </widget>
          </item>
