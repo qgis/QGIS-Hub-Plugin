@@ -251,6 +251,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     self.tr("Success"), text, duration=5
                 )
 
+            # Refreshing the processing toolbox
+            QgsApplication.processingRegistry().providerById(
+                "model"
+            ).refreshAlgorithms()
+
 
 # TODO: do it QGIS task to have
 def download_resource_file(url: str, file_path: str):
