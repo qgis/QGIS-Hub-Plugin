@@ -182,32 +182,37 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         file_extension = os.path.splitext(resource.file)[1]
 
         file_path = QFileDialog.getSaveFileName(
-            self, "Save Resource", "", f"All Files (*{file_extension})"
+            self,
+            self.tr("Save Resource"),
+            resource.file,
+            self.tr(
+                "All Files (*);;Geopackage (*.gpkg);;QGIS Model (*.model3);; ZIP Files (*.zip)"
+            ),
         )[0]
 
         if file_path:
-            full_file_path = file_path + file_extension
-            download_resource_file(
-                resource.file, resource.resource_type, resource.uuid, full_file_path
-            )
-            text = "Successfully downloaded {} to {}".format(
-                resource.name, full_file_path
-            )
+            if not file_path.endswith(file_extension):
+                file_path = file_path + file_extension
+
+            download_resource_file(resource.file, file_path)
+
+            text = self.tr(f"Successfully downloaded {resource.name} to {file_path}")
+
             self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
             if self.checkBoxOpenDirectory.isChecked():
                 QDesktopServices.openUrl(
                     QUrl.fromLocalFile(str(Path(file_path).parent))
                 )
         else:
-            text = "Downloaded canceled for %s" % resource.name
+            text = self.tr(f"Download canceled for {resource.name}")
             self.iface.messageBar().pushMessage(
                 self.tr("Warning"), text, level=Qgis.Warning, duration=5
             )
 
 
 # TODO: do it QGIS task to have
-def download_resource_file(url: str, resource_type: str, uuid: str, directory: str):
-    resource_path = Path(directory)
+def download_resource_file(url: str, file_path: str):
+    resource_path = Path(file_path)
     download_file(url, resource_path)
     if resource_path.exists():
         return resource_path
