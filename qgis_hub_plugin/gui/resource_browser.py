@@ -4,7 +4,7 @@ from pathlib import Path
 
 from qgis.core import Qgis, QgsApplication
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QRegExp, QSize, QSortFilterProxyModel, Qt, QUrl, pyqtSlot
+from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
 from qgis.PyQt.QtGui import (
     QDesktopServices,
     QIcon,
@@ -12,7 +12,12 @@ from qgis.PyQt.QtGui import (
     QStandardItem,
     QStandardItemModel,
 )
-from qgis.PyQt.QtWidgets import QDialog, QGraphicsPixmapItem, QGraphicsScene
+from qgis.PyQt.QtWidgets import (
+    QDialog,
+    QFileDialog,
+    QGraphicsPixmapItem,
+    QGraphicsScene,
+)
 
 from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
@@ -174,33 +179,48 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def download_resource(self):
         resource = self.selected_resource()
-        file_path = download_resource_file(
-            resource.file, resource.resource_type, resource.uuid
-        )
+        file_extension = os.path.splitext(resource.file)[1]
+
+        file_path = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Save Resource"),
+            resource.file,
+            self.tr(
+                "All Files (*);;Geopackage (*.gpkg);;QGIS Model (*.model3);; ZIP Files (*.zip)"
+            ),
+        )[0]
+
         if file_path:
-            text = f"Successfully download {resource.name} to {file_path}"
-            self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
-            if self.checkBoxOpenDirectory.isChecked():
-                QDesktopServices.openUrl(QUrl.fromLocalFile(str(file_path.parent)))
-        else:
-            text = f"Failed download {resource.name} from {resource.file}"
-            self.iface.messageBar().pushMessage(
-                self.tr("Warning"), text, level=Qgis.Warning, duration=5
-            )
+            if not file_path.endswith(file_extension):
+                file_path = file_path + file_extension
+
+            if not download_resource_file(resource.file, file_path):
+                text = self.tr(f"Download failed for {resource.name}")
+                self.iface.messageBar().pushMessage(
+                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
+                )
+            else:
+                text = self.tr(
+                    f"Successfully downloaded {resource.name} to {file_path}"
+                )
+                self.iface.messageBar().pushMessage(
+                    self.tr("Success"), text, duration=5
+                )
+
+                if self.checkBoxOpenDirectory.isChecked():
+                    QDesktopServices.openUrl(
+                        QUrl.fromLocalFile(str(Path(file_path).parent))
+                    )
 
 
 # TODO: do it QGIS task to have
-def download_resource_file(url: str, resource_type: str, uuid: str):
-    qgis_user_dir = QgsApplication.qgisSettingsDirPath()
-    download_dir = Path(qgis_user_dir, "qgis_hub", "downloads", resource_type)
-    file_name = url.split("/")[-1]
-    resource_path = Path(download_dir, file_name)
-    if not download_dir.exists():
-        download_dir.mkdir(parents=True, exist_ok=True)
-
+def download_resource_file(url: str, file_path: str):
+    resource_path = Path(file_path)
     download_file(url, resource_path)
     if resource_path.exists():
         return resource_path
+    else:
+        return None
 
 
 def download_resource_thumbnail(url: str, uuid: str):
