@@ -4,7 +4,7 @@ from pathlib import Path
 
 from qgis.core import Qgis, QgsApplication
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
+from qgis.PyQt.QtCore import QCoreApplication, QRegExp, QSize, Qt, QUrl, pyqtSlot
 from qgis.PyQt.QtGui import (
     QDesktopServices,
     QIcon,
@@ -13,6 +13,7 @@ from qgis.PyQt.QtGui import (
     QStandardItemModel,
 )
 from qgis.PyQt.QtWidgets import (
+    QApplication,
     QDialog,
     QFileDialog,
     QGraphicsPixmapItem,
@@ -71,15 +72,26 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
         self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
 
-        self.reloadToolButton.setIcon(
-            QIcon(":/images/themes/default/mActionRefresh.svg")
-        )
-        self.reloadToolButton.clicked.connect(
+        self.reloadPushButton.clicked.connect(
             lambda: self.populate_resources(force_update=True)
         )
 
         self.hide_preview()
 
+    def busy_cursor_decorator(func):
+        def wrapper(*args, **kwargs):
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            QCoreApplication.processEvents()
+
+            try:
+                return func(*args, **kwargs)
+            finally:
+                QApplication.restoreOverrideCursor()
+                QCoreApplication.processEvents()
+
+        return wrapper
+
+    @busy_cursor_decorator
     def populate_resources(self, force_update=False):
         if force_update or not self.resources:
             response = get_all_resources(force_update=force_update)
