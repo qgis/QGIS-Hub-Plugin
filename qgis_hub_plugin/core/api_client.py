@@ -23,9 +23,13 @@ def get_all_resources(params=None, force_update=False):
     # TODO: download in the background
     response = requests.get(BASE_URL, params=params)
 
-    # Store the response in a file
-    response_folder.mkdir(parents=True, exist_ok=True)
-    with open(response_file, "w") as f:
-        json.dump(response.json(), f)
+    if response.status_code == 200:
+        # Store the response in a file
+        response_folder.mkdir(parents=True, exist_ok=True)
+        with open(response_file, "w") as f:
+            json.dump(response.json(), f)
 
-    return response.json()
+        return response.json()
+
+    else:
+        return None
