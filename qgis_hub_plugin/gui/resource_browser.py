@@ -4,7 +4,7 @@ from pathlib import Path
 
 from qgis.core import Qgis, QgsApplication
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QCoreApplication, QRegExp, QSize, Qt, QUrl, pyqtSlot
+from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
 from qgis.PyQt.QtGui import (
     QDesktopServices,
     QIcon,
@@ -13,7 +13,6 @@ from qgis.PyQt.QtGui import (
     QStandardItemModel,
 )
 from qgis.PyQt.QtWidgets import (
-    QApplication,
     QDialog,
     QFileDialog,
     QGraphicsPixmapItem,
@@ -24,6 +23,7 @@ from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import download_file, get_icon
+from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), "resource_browser.ui")
@@ -78,20 +78,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.hide_preview()
 
-    def busy_cursor_decorator(func):
-        def wrapper(*args, **kwargs):
-            QApplication.setOverrideCursor(Qt.WaitCursor)
-            QCoreApplication.processEvents()
-
-            try:
-                return func(*args, **kwargs)
-            finally:
-                QApplication.restoreOverrideCursor()
-                QCoreApplication.processEvents()
-
-        return wrapper
-
-    @busy_cursor_decorator
+    @show_busy_cursor
     def populate_resources(self, force_update=False):
         if force_update or not self.resources:
             response = get_all_resources(force_update=force_update)
