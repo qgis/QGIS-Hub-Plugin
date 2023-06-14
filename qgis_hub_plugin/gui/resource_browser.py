@@ -100,6 +100,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         text = self.tr(f"Successfully populated the resources")
         self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
 
+        self.update_title_bar()
+
     def update_checkbox_states(self):
         geopackage_checked = self.checkBoxGeopackage.isChecked()
         style_checked = self.checkBoxStyle.isChecked()
@@ -133,6 +135,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             [ResourceItem.NameRole, ResourceItem.CreatorRole]
         )
         self.proxy_model.setCheckboxStates(self.checkbox_states)
+
+        self.update_title_bar()
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
@@ -262,6 +266,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             QgsApplication.processingRegistry().providerById(
                 "model"
             ).refreshAlgorithms()
+
+    def update_title_bar(self):
+        num_total_resources = len(self.resources)
+        num_selected_resources = self.proxy_model.rowCount()
+        window_title = self.tr(
+            f"QGIS Hub Explorer ({num_selected_resources} of {num_total_resources})"
+        )
+        self.setWindowTitle(window_title)
 
 
 # TODO: do it QGIS task to have
