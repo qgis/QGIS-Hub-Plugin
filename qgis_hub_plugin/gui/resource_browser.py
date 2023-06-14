@@ -23,6 +23,7 @@ from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import download_file, get_icon
+from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), "resource_browser.ui")
@@ -71,27 +72,33 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
         self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
 
-        self.reloadToolButton.setIcon(
-            QIcon(":/images/themes/default/mActionRefresh.svg")
-        )
-        self.reloadToolButton.clicked.connect(
+        self.reloadPushButton.clicked.connect(
             lambda: self.populate_resources(force_update=True)
         )
 
         self.hide_preview()
 
+    @show_busy_cursor
     def populate_resources(self, force_update=False):
         if force_update or not self.resources:
             response = get_all_resources(force_update=force_update)
-            # total = response.get("total")
-            # previous_url = response.get("previous")
-            # next_url = response.get("next")
+
+            if response is None:
+                text = self.tr(f"Error populating the resources")
+                self.iface.messageBar().pushMessage(
+                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
+                )
+                return
+
             self.resources = response.get("results", {})
 
         self.resource_model.clear()
         for resource in self.resources:
             item = ResourceItem(resource)
             self.resource_model.appendRow(item)
+
+        text = self.tr(f"Successfully populated the resources")
+        self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
 
     def update_checkbox_states(self):
         geopackage_checked = self.checkBoxGeopackage.isChecked()
