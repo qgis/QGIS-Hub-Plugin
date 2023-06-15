@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 from qgis.core import Qgis, QgsApplication
+from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
 from qgis.PyQt.QtGui import (
@@ -17,6 +18,7 @@ from qgis.PyQt.QtWidgets import (
     QFileDialog,
     QGraphicsPixmapItem,
     QGraphicsScene,
+    QSizePolicy,
 )
 
 from qgis_hub_plugin.core.api_client import get_all_resources
@@ -40,6 +42,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.graphicsScene = QGraphicsScene()
         self.graphicsViewPreview.setScene(self.graphicsScene)
+
+        # Message bar
+        self.message_bar = QgsMessageBar(self)
+        self.message_bar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.vlayout.insertWidget(0, self.message_bar)
 
         # Resources
         self.resources = []
@@ -85,9 +92,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
             if response is None:
                 text = self.tr(f"Error populating the resources")
-                self.iface.messageBar().pushMessage(
-                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
-                )
+                self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
                 return
 
             self.resources = response.get("results", {})
@@ -97,8 +102,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             item = ResourceItem(resource)
             self.resource_model.appendRow(item)
 
-        text = self.tr(f"Successfully populated the resources")
-        self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
+        if force_update:
+            text = self.tr(f"Successfully populated the resources")
+            self.message_bar.pushMessage(self.tr("Success"), text, Qgis.Success, 5)
 
         self.update_title_bar()
 
@@ -214,17 +220,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
             if not download_resource_file(resource.file, file_path):
                 text = self.tr(f"Download failed for {resource.name}")
-                self.iface.messageBar().pushMessage(
-                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
-                )
+                self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
             else:
-                text = self.tr(
-                    f"Successfully downloaded {resource.name} to {file_path}"
-                )
-                self.iface.messageBar().pushMessage(
-                    self.tr("Success"), text, duration=5
-                )
-
+                text = self.tr(f"Downloaded {resource.name} to {file_path}")
+                self.message_bar.pushMessage(self.tr("Success"), text, Qgis.Success, 5)
                 if self.checkBoxOpenDirectory.isChecked():
                     QDesktopServices.openUrl(
                         QUrl.fromLocalFile(str(Path(file_path).parent))
@@ -251,16 +250,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if file_path:
             if not download_resource_file(resource.file, file_path):
                 text = self.tr(f"Download failed for {resource.name}")
-                self.iface.messageBar().pushMessage(
-                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
-                )
+                self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
             else:
                 text = self.tr(
                     f"Successfully downloaded {resource.name} to {file_path}"
                 )
-                self.iface.messageBar().pushMessage(
-                    self.tr("Success"), text, duration=5
-                )
+                self.message_bar.pushMessage(self.tr("Success"), text, Qgis.Success, 5)
 
             # Refreshing the processing toolbox
             QgsApplication.processingRegistry().providerById(
