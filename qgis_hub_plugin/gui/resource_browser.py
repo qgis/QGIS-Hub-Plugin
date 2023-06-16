@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 from qgis.core import Qgis, QgsApplication
+from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
 from qgis.PyQt.QtGui import (
@@ -17,6 +18,7 @@ from qgis.PyQt.QtWidgets import (
     QFileDialog,
     QGraphicsPixmapItem,
     QGraphicsScene,
+    QSizePolicy,
 )
 
 from qgis_hub_plugin.core.api_client import get_all_resources
@@ -40,6 +42,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.graphicsScene = QGraphicsScene()
         self.graphicsViewPreview.setScene(self.graphicsScene)
+
+        # Message bar
+        self.message_bar = QgsMessageBar(self)
+        self.message_bar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.vlayout.insertWidget(0, self.message_bar)
 
         # Resources
         self.resources = []
@@ -78,16 +85,23 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.hide_preview()
 
+    def show_success_message(self, text):
+        return self.message_bar.pushMessage(
+            self.tr("Success"), self.tr(text), Qgis.Success, 5
+        )
+
+    def show_warning_message(self, text):
+        return self.message_bar.pushMessage(
+            self.tr("Warning"), self.tr(text), Qgis.Warning, 5
+        )
+
     @show_busy_cursor
     def populate_resources(self, force_update=False):
         if force_update or not self.resources:
             response = get_all_resources(force_update=force_update)
 
             if response is None:
-                text = self.tr(f"Error populating the resources")
-                self.iface.messageBar().pushMessage(
-                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
-                )
+                self.show_warning_message("Error populating the resources")
                 return
 
             self.resources = response.get("results", {})
@@ -97,8 +111,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             item = ResourceItem(resource)
             self.resource_model.appendRow(item)
 
-        text = self.tr(f"Successfully populated the resources")
-        self.iface.messageBar().pushMessage(self.tr("Success"), text, duration=5)
+        if force_update:
+            self.show_success_message("Successfully populated the resources")
 
         self.update_title_bar()
 
@@ -213,17 +227,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 file_path = file_path + file_extension
 
             if not download_resource_file(resource.file, file_path):
-                text = self.tr(f"Download failed for {resource.name}")
-                self.iface.messageBar().pushMessage(
-                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
-                )
+                self.show_warning_message(f"Download failed for {resource.name}")
             else:
-                text = self.tr(
-                    f"Successfully downloaded {resource.name} to {file_path}"
-                )
-                self.iface.messageBar().pushMessage(
-                    self.tr("Success"), text, duration=5
-                )
+                self.show_success_message(f"Downloaded {resource.name} to {file_path}")
 
                 if self.checkBoxOpenDirectory.isChecked():
                     QDesktopServices.openUrl(
@@ -250,16 +256,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         if file_path:
             if not download_resource_file(resource.file, file_path):
-                text = self.tr(f"Download failed for {resource.name}")
-                self.iface.messageBar().pushMessage(
-                    self.tr("Warning"), text, level=Qgis.Warning, duration=5
-                )
+                self.show_warning_message(f"Download failed for {resource.name}")
             else:
-                text = self.tr(
+                self.show_success_message(
                     f"Successfully downloaded {resource.name} to {file_path}"
-                )
-                self.iface.messageBar().pushMessage(
-                    self.tr("Success"), text, duration=5
                 )
 
             # Refreshing the processing toolbox
