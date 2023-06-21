@@ -6,14 +6,22 @@ from qgis.PyQt.QtCore import QByteArray, QFile, QUrl
 from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgis_hub_plugin.toolbelt import PlgLogger
-
-
-def tr(text):
-    return text
+from qgis_hub_plugin.utilities.i18n import tr
 
 
 def humanize_file_size(size):
-    return size
+    """Return humanize size from bytes.
+
+    :param size: The size to humanize in bytes.
+    :type size: float
+
+    :return: Human readable size.
+    :rtype: unicode
+    """
+    for x in ["bytes", "KB", "MB", "GB", "TB"]:
+        if size < 1024.0:
+            return f"{size:3.1f} {x}"
+        size /= 1024.0
 
 
 class FileDownloader:
