@@ -1,20 +1,13 @@
 import os
 import platform
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
 from qgis.core import Qgis, QgsApplication, QgsStyle
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
-from qgis.PyQt.QtGui import (
-    QDesktopServices,
-    QIcon,
-    QPixmap,
-    QStandardItem,
-    QStandardItemModel,
-)
+from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -26,8 +19,9 @@ from qgis.PyQt.QtWidgets import (
 from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.gui.constants import CreatorRole, NameRole, ResourceTypeRole
+from qgis_hub_plugin.gui.resource_item import ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger
-from qgis_hub_plugin.utilities.common import download_file, get_icon
+from qgis_hub_plugin.utilities.common import download_file, download_resource_thumbnail
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
@@ -315,59 +309,3 @@ def download_resource_file(url: str, file_path: str, force: bool):
         return resource_path
     else:
         return None
-
-
-def download_resource_thumbnail(url: str, uuid: str):
-    qgis_user_dir = QgsApplication.qgisSettingsDirPath()
-    # Assume it as jpg
-    extension = ".jpg"
-    try:
-        extension = url.split(".")[-1]
-    except IndexError():
-        pass
-
-    thumbnail_dir = Path(qgis_user_dir, "qgis_hub", "thumbnails")
-    thumbnail_path = Path(thumbnail_dir, f"{uuid}.{extension}")
-    if not thumbnail_dir.exists():
-        thumbnail_dir.mkdir(parents=True, exist_ok=True)
-
-    download_file(url, thumbnail_path)
-    if thumbnail_path.exists():
-        return thumbnail_path
-
-
-def shorten_string(text: str) -> str:
-    if len(text) > 20:
-        text = text[:17] + "..."
-    return text
-
-
-class ResourceItem(QStandardItem):
-    def __init__(self, params: dict):
-        super().__init__()
-
-        # Attribute from the QGIS Hub
-        self.resource_type = params.get("resource_type")
-        self.resource_subtype = params.get("resource_subtype", "")
-        self.uuid = params.get("uuid")
-        self.name = params.get("name")
-        self.creator = params.get("creator")
-        upload_date_string = params.get("upload_date")
-        self.upload_date = datetime.fromisoformat(upload_date_string)
-        self.download_count = params.get("download_count")
-        self.description = params.get("description")
-        self.file = params.get("file")
-        self.thumbnail = params.get("thumbnail")
-
-        # Custom attribute
-        self.setText(shorten_string(self.name))
-        self.setToolTip(f"{self.name} by {self.creator}")
-        thumbnail_path = download_resource_thumbnail(self.thumbnail, self.uuid)
-        if thumbnail_path:
-            self.setIcon(QIcon(str(thumbnail_path)))
-        else:
-            self.setIcon(get_icon("qbrowser_icon.svg"))
-
-        self.setData(self.resource_type, ResourceTypeRole)
-        self.setData(self.name, NameRole)
-        self.setData(self.creator, CreatorRole)
