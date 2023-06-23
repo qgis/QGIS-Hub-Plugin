@@ -18,7 +18,12 @@ from qgis.PyQt.QtWidgets import (
 
 from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
-from qgis_hub_plugin.gui.constants import CreatorRole, NameRole, ResourceTypeRole
+from qgis_hub_plugin.gui.constants import (
+    CreatorRole,
+    NameRole,
+    ResourceTypeRole,
+    ResoureType,
+)
 from qgis_hub_plugin.gui.resource_item import ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import download_file, download_resource_thumbnail
@@ -86,7 +91,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         return self.message_bar.pushMessage(self.tr("Success"), text, Qgis.Success, 5)
 
     def show_error_message(self, text):
-        return self.message_bar.pushMessage(self.tr("Error"), text, Qgis.Error, 5)
+        return self.message_bar.pushMessage(self.tr("Error"), text, Qgis.Critical, 5)
 
     def show_warning_message(self, text):
         return self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
@@ -118,9 +123,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         model_checked = self.checkBoxModel.isChecked()
 
         self.checkbox_states = {
-            "Geopackage": geopackage_checked,
-            "Style": style_checked,
-            "Model": model_checked,
+            ResoureType.Geopackage: geopackage_checked,
+            ResoureType.Style: style_checked,
+            ResoureType.Model: model_checked,
         }
 
     def update_resource_filter(self):
@@ -165,9 +170,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def update_custom_button(self):
         self.addQGISPushButton.setVisible(True)
-        if self.selected_resource().resource_type == "Model":
+        if self.selected_resource().resource_type == ResoureType.Model:
             self.addQGISPushButton.setText(self.tr("Add Model to QGIS"))
-        elif self.selected_resource().resource_type == "Style":
+        elif self.selected_resource().resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
         else:
             self.addQGISPushButton.setVisible(False)
@@ -241,6 +246,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         elif self.selected_resource().resource_type == "Style":
             self.add_style_to_qgis()
 
+    @show_busy_cursor
     def add_model_to_qgis(self):
         resource = self.selected_resource()
         qgis_user_dir = QgsApplication.qgisSettingsDirPath()
@@ -260,11 +266,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         )[0]
 
         if file_path:
-            if not download_resource_file(resource.file, file_path):
-                self.show_warning_message(f"Download failed for {resource.name}")
-            else:
+            if download_resource_file(resource.file, file_path):
                 self.show_success_message(
-                    f"Successfully downloaded {resource.name} to {file_path}"
+                    self.tr(f"Model {resource.name} is added to QGIS")
+                )
+
+            else:
+                self.show_warning_message(
+                    self.tr(f"Download failed for model {resource.name}")
                 )
 
             # Refreshing the processing toolbox
@@ -272,6 +281,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 "model"
             ).refreshAlgorithms()
 
+    @show_busy_cursor
     def add_style_to_qgis(self):
         resource = self.selected_resource()
         tempdir = Path(
@@ -288,7 +298,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 self.tr(f"Style {resource.name} is added to QGIS")
             )
         else:
-            self.show_success_message(
+            self.show_error_message(
                 self.tr(f"Style {resource.name} is not added to QGIS")
             )
 
@@ -302,7 +312,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
 
 # TODO: do it QGIS task to have
-def download_resource_file(url: str, file_path: str, force: bool):
+def download_resource_file(url: str, file_path: str, force: bool = False):
     resource_path = Path(file_path)
     download_file(url, resource_path, force)
     if resource_path.exists():
