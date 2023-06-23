@@ -25,6 +25,7 @@ from qgis.PyQt.QtWidgets import (
 
 from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
+from qgis_hub_plugin.gui.constants import CreatorRole, NameRole, ResourceTypeRole
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import download_file, get_icon
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
@@ -140,15 +141,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         filter_regexp = QRegExp("|".join(filter_regexp_parts), Qt.CaseInsensitive)
         self.proxy_model.setFilterRegExp(filter_regexp)
-        self.proxy_model.setRolesToFilter([ResourceItem.ResourceTypeRole])
+        self.proxy_model.setRolesToFilter([ResourceTypeRole])
         self.proxy_model.setCheckboxStates(self.checkbox_states)
         self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
         self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
-        self.proxy_model.setRolesToFilter(
-            [ResourceItem.NameRole, ResourceItem.CreatorRole]
-        )
+        self.proxy_model.setRolesToFilter([NameRole, CreatorRole])
         self.proxy_model.setCheckboxStates(self.checkbox_states)
 
         self.update_title_bar()
@@ -344,10 +343,6 @@ def shorten_string(text: str) -> str:
 
 
 class ResourceItem(QStandardItem):
-    ResourceTypeRole = Qt.UserRole + 1
-    NameRole = Qt.UserRole + 2
-    CreatorRole = Qt.UserRole + 3
-
     def __init__(self, params: dict):
         super().__init__()
 
@@ -373,6 +368,6 @@ class ResourceItem(QStandardItem):
         else:
             self.setIcon(get_icon("qbrowser_icon.svg"))
 
-        self.setData(self.resource_type, self.ResourceTypeRole)
-        self.setData(self.name, self.NameRole)
-        self.setData(self.creator, self.CreatorRole)
+        self.setData(self.resource_type, ResourceTypeRole)
+        self.setData(self.name, NameRole)
+        self.setData(self.creator, CreatorRole)

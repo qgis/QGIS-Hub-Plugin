@@ -1,5 +1,7 @@
 from qgis.PyQt.QtCore import QSortFilterProxyModel
 
+from qgis_hub_plugin.gui.constants import ResourceTypeRole
+
 
 class MultiRoleFilterProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
@@ -21,11 +23,7 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
             return True
 
         index = model.index(source_row, 0, source_parent)
-        # Fix circular dependency
-        # TODO(IS): do a better separation
-        from qgis_hub_plugin.gui.resource_browser import ResourceItem
-
-        resource_type = model.data(index, ResourceItem.ResourceTypeRole)
+        resource_type = model.data(index, ResourceTypeRole)
 
         if not self.checkbox_states.get(resource_type, False):
             return False
