@@ -1,10 +1,9 @@
 import os
-import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from qgis.core import Qgis, QgsApplication, QgsProject, QgsVectorLayer
+from qgis.core import Qgis, QgsApplication, QgsProject, QgsSettings, QgsVectorLayer
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
@@ -32,6 +31,19 @@ from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 UI_CLASS = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), "resource_browser.ui")
 )[0]
+
+
+def store_download_location(download_location):
+    s = QgsSettings()
+    s.setValue("myplugin/downloadLocation", download_location)
+
+
+def read_download_location(default_download_location):
+    s = QgsSettings()
+    download_location = s.value(
+        "myplugin/downloadLocation", defaultValue=default_download_location
+    )
+    return download_location
 
 
 class ResourceBrowserDialog(QDialog, UI_CLASS):
@@ -221,10 +233,18 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         resource = self.selected_resource()
         file_extension = os.path.splitext(resource.file)[1]
 
+        # Set the default download location
+        default_download_location = "~/Downloads"
+
+        # Read the stored download location
+        download_location = read_download_location(default_download_location)
+
+        default_path = os.path.join(download_location, os.path.basename(resource.file))
+
         file_path = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Resource"),
-            resource.file,
+            default_path,
             self.tr(
                 "All Files (*);;Geopackage (*.gpkg);;QGIS Model (*.model3);; ZIP Files (*.zip)"
             ),
@@ -243,6 +263,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     QDesktopServices.openUrl(
                         QUrl.fromLocalFile(str(Path(file_path).parent))
                     )
+
+                store_download_location(str(Path(file_path).parent))
 
     def add_to_qgis(self):
         resource = self.selected_resource()
