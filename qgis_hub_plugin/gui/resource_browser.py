@@ -33,16 +33,18 @@ UI_CLASS = uic.loadUiType(
 )[0]
 
 
-def store_download_location(download_location):
+def store_settings(key_value, stored_value):
     s = QgsSettings()
-    s.setValue("myplugin/downloadLocation", download_location)
+    # s.setValue("myplugin/downloadLocation", download_location)
+    s.setValue(key_value, stored_value)
 
 
-def read_download_location(default_download_location):
+def read_settings(key_value, stored_value):
     s = QgsSettings()
-    download_location = s.value(
-        "myplugin/downloadLocation", defaultValue=default_download_location
-    )
+    download_location = s.value(key_value, defaultValue=stored_value)
+    # download_location = s.value(
+    #     "myplugin/downloadLocation", defaultValue=default_download_location
+    # )
     return download_location
 
 
@@ -237,7 +239,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         default_download_location = "~/Downloads"
 
         # Read the stored download location
-        download_location = read_download_location(default_download_location)
+        download_location = read_settings(
+            "myplugin/downloadLocation", default_download_location
+        )
 
         default_path = os.path.join(download_location, os.path.basename(resource.file))
 
@@ -264,7 +268,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                         QUrl.fromLocalFile(str(Path(file_path).parent))
                     )
 
-                store_download_location(str(Path(file_path).parent))
+                store_settings("myplugin/downloadLocation", str(Path(file_path).parent))
 
     def add_to_qgis(self):
         resource = self.selected_resource()
