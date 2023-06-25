@@ -1,8 +1,10 @@
 import os
+import tempfile
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from qgis.core import Qgis, QgsApplication
+from qgis.core import Qgis, QgsApplication, QgsProject, QgsVectorLayer
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
@@ -73,7 +75,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
-        self.addQGISPushButton.clicked.connect(self.add_model_to_qgis)
+        self.addQGISPushButton.clicked.connect(self.add_to_qgis)
 
         self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
@@ -169,6 +171,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             return None
 
     def update_preview(self):
+        # import pydevd_pycharm
+        # pydevd_pycharm.settrace('127.0.0.1', port=53100, stdoutToServer=True, stderrToServer=True)
         resource = self.selected_resource()
         if resource is None:
             self.hide_preview()
@@ -176,6 +180,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.show_preview()
 
         if resource.resource_type == "Model":
+            self.addQGISPushButton.setText("Add to QGIS")
+            self.addQGISPushButton.setVisible(True)
+        elif resource.resource_type == "Geopackage":
+            self.addQGISPushButton.setText("Add to Current Project")
             self.addQGISPushButton.setVisible(True)
         else:
             self.addQGISPushButton.setVisible(False)
@@ -236,6 +244,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                         QUrl.fromLocalFile(str(Path(file_path).parent))
                     )
 
+    def add_to_qgis(self):
+        resource = self.selected_resource()
+        if resource.resource_type == "Model":
+            self.add_model_to_qgis()
+        elif resource.resource_type == "Geopackage":
+            self.add_geopackage()
+
     def add_model_to_qgis(self):
         resource = self.selected_resource()
         qgis_user_dir = QgsApplication.qgisSettingsDirPath()
@@ -266,6 +281,57 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             QgsApplication.processingRegistry().providerById(
                 "model"
             ).refreshAlgorithms()
+
+    def add_geopackage(self):
+        resource = self.selected_resource()
+        file_extension = os.path.splitext(resource.file)[1]
+
+        file_path = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Save Resource"),
+            resource.file,
+            self.tr("ZIP Files (*.zip)"),
+        )[0]
+
+        if file_path:
+            if not file_path.endswith(file_extension):
+                file_path = file_path + file_extension
+
+            if not download_resource_file(resource.file, file_path):
+                self.show_warning_message(f"Download failed for {resource.name}")
+
+        # Extract the geopackage file from the zip
+        if file_path.endswith(".zip"):
+            with zipfile.ZipFile(file_path, "r") as zip_ref:
+                for filename in zip_ref.namelist():
+                    if filename.endswith(".gpkg"):
+                        geopackage_filename = os.path.basename(filename)
+                        extract_location = os.path.dirname(file_path)
+                        zip_ref.extract(filename, extract_location)
+                        break
+        else:
+            geopackage_filename = os.path.basename(file_path)
+            extract_location = os.path.dirname(file_path)
+
+        current_project = QgsProject.instance()
+        layer_path = os.path.join(extract_location, geopackage_filename)
+        geopackage = QgsVectorLayer(layer_path, geopackage_filename, "ogr")
+        if geopackage.isValid():
+            # Add all layers from the geopackage to the project
+            layers = geopackage.dataProvider().subLayers()
+            for layer in layers:
+                layer_parts = layer.split("!!::!!")
+                layer_name = layer_parts[1]
+                layer_uri = f"{layer_path}|layername={layer_name}"
+                vector_layer = QgsVectorLayer(layer_uri, layer_name, "ogr")
+                if vector_layer.isValid():
+                    current_project.addMapLayer(vector_layer)
+                else:
+                    self.show_warning_message("Invalid layer:", layer_name)
+        else:
+            self.show_warning_message("Invalid geopackage:", layer_path)
+
+        self.show_success_message("Geopackage successfully added to current project")
 
     def update_title_bar(self):
         num_total_resources = len(self.resources)
