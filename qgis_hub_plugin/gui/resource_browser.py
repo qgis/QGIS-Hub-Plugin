@@ -54,14 +54,18 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.resources = []
         self.checkbox_states = {}
         self.update_checkbox_states()
-        self.resource_model = QStandardItemModel(self.listViewResources)
+        self.resource_model = QStandardItemModel()
 
         self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
-        self.listViewResources.setModel(self.proxy_model)
 
-        self.resource_selection_model = self.listViewResources.selectionModel()
-        self.resource_selection_model.selectionChanged.connect(
+        self.listViewResources.setModel(self.proxy_model)
+        self.treeViewResources.setModel(self.proxy_model)
+
+        self.listViewResources.selectionModel().selectionChanged.connect(
+            self.on_resource_selection_changed
+        )
+        self.treeViewResources.selectionModel().selectionChanged.connect(
             self.on_resource_selection_changed
         )
 
@@ -111,6 +115,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.resources = response.get("results", {})
 
         self.resource_model.clear()
+        # TODO: Make sure it also show other attribute
         for resource in self.resources:
             item = ResourceItem(resource)
             self.resource_model.appendRow(item)
@@ -163,6 +168,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.log("no resource selected")
 
     def selected_resource(self):
+        # TODO: Check mode grid or list, and probably updated the selected resource on other view
         selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
         if len(selected_indexes) > 0:
             proxy_index = selected_indexes[0]
