@@ -81,6 +81,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
         self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
 
+        self.listViewToolButton.clicked.connect(self.show_list_view)
+        self.iconViewToolButton.clicked.connect(self.show_icon_view)
+
         self.reloadPushButton.clicked.connect(
             lambda: self.populate_resources(force_update=True)
         )
@@ -309,6 +312,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             f"QGIS Hub Explorer ({num_selected_resources} of {num_total_resources})"
         )
         self.setWindowTitle(window_title)
+
+    def show_list_view(self):
+        self.viewStackedWidget.setCurrentIndex(1)
+
+    def show_icon_view(self):
+        self.viewStackedWidget.setCurrentIndex(0)
 
 
 # TODO: do it QGIS task to have
