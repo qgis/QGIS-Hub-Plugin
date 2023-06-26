@@ -1,20 +1,14 @@
 import os
+import platform
 import tempfile
 import zipfile
-from datetime import datetime
 from pathlib import Path
 
-from qgis.core import Qgis, QgsApplication, QgsProject, QgsVectorLayer
+from qgis.core import Qgis, QgsApplication, QgsProject, QgsStyle, QgsVectorLayer
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
-from qgis.PyQt.QtGui import (
-    QDesktopServices,
-    QIcon,
-    QPixmap,
-    QStandardItem,
-    QStandardItemModel,
-)
+from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -25,8 +19,15 @@ from qgis.PyQt.QtWidgets import (
 
 from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
+from qgis_hub_plugin.gui.constants import (
+    CreatorRole,
+    NameRole,
+    ResourceTypeRole,
+    ResoureType,
+)
+from qgis_hub_plugin.gui.resource_item import ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger
-from qgis_hub_plugin.utilities.common import download_file, get_icon
+from qgis_hub_plugin.utilities.common import download_file, download_resource_thumbnail
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
@@ -75,7 +76,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.pushButtonDownload.clicked.connect(self.download_resource)
 
-        self.addQGISPushButton.clicked.connect(self.add_to_qgis)
+        self.addQGISPushButton.clicked.connect(self.add_resource_to_qgis)
 
         self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
@@ -88,14 +89,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.hide_preview()
 
     def show_success_message(self, text):
-        return self.message_bar.pushMessage(
-            self.tr("Success"), self.tr(text), Qgis.Success, 5
-        )
+        return self.message_bar.pushMessage(self.tr("Success"), text, Qgis.Success, 5)
+
+    def show_error_message(self, text):
+        return self.message_bar.pushMessage(self.tr("Error"), text, Qgis.Critical, 5)
 
     def show_warning_message(self, text):
-        return self.message_bar.pushMessage(
-            self.tr("Warning"), self.tr(text), Qgis.Warning, 5
-        )
+        return self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
 
     @show_busy_cursor
     def populate_resources(self, force_update=False):
@@ -124,9 +124,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         model_checked = self.checkBoxModel.isChecked()
 
         self.checkbox_states = {
-            "Geopackage": geopackage_checked,
-            "Style": style_checked,
-            "Model": model_checked,
+            ResoureType.Geopackage: geopackage_checked,
+            ResoureType.Style: style_checked,
+            ResoureType.Model: model_checked,
         }
 
     def update_resource_filter(self):
@@ -141,15 +141,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         filter_regexp = QRegExp("|".join(filter_regexp_parts), Qt.CaseInsensitive)
         self.proxy_model.setFilterRegExp(filter_regexp)
-        self.proxy_model.setRolesToFilter([ResourceItem.ResourceTypeRole])
+        self.proxy_model.setRolesToFilter([ResourceTypeRole])
         self.proxy_model.setCheckboxStates(self.checkbox_states)
         self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
         self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
-        self.proxy_model.setRolesToFilter(
-            [ResourceItem.NameRole, ResourceItem.CreatorRole]
-        )
+        self.proxy_model.setRolesToFilter([NameRole, CreatorRole])
         self.proxy_model.setCheckboxStates(self.checkbox_states)
 
         self.update_title_bar()
@@ -158,6 +156,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def on_resource_selection_changed(self, selected, deselected):
         if self.selected_resource():
             self.update_preview()
+            self.update_custom_button()
         else:
             self.log("no resource selected")
 
@@ -170,23 +169,23 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         else:
             return None
 
+    def update_custom_button(self):
+        self.addQGISPushButton.setVisible(True)
+        if self.selected_resource().resource_type == ResoureType.Model:
+            self.addQGISPushButton.setText(self.tr("Add Model to QGIS"))
+        elif self.selected_resource().resource_type == ResoureType.Style:
+            self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
+        elif self.selected_resource().resource_type == ResoureType.Geopackage:
+            self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
+        else:
+            self.addQGISPushButton.setVisible(False)
+
     def update_preview(self):
-        # import pydevd_pycharm
-        # pydevd_pycharm.settrace('127.0.0.1', port=53100, stdoutToServer=True, stderrToServer=True)
         resource = self.selected_resource()
         if resource is None:
             self.hide_preview()
             return
         self.show_preview()
-
-        if resource.resource_type == "Model":
-            self.addQGISPushButton.setText("Add to QGIS")
-            self.addQGISPushButton.setVisible(True)
-        elif resource.resource_type == "Geopackage":
-            self.addQGISPushButton.setText("Add to Current Project")
-            self.addQGISPushButton.setVisible(True)
-        else:
-            self.addQGISPushButton.setVisible(False)
 
         # Thumbnail
         thumbnail_path = download_resource_thumbnail(resource.thumbnail, resource.uuid)
@@ -244,13 +243,15 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                         QUrl.fromLocalFile(str(Path(file_path).parent))
                     )
 
-    def add_to_qgis(self):
-        resource = self.selected_resource()
-        if resource.resource_type == "Model":
+    def add_resource_to_qgis(self):
+        if self.selected_resource().resource_type == "Model":
             self.add_model_to_qgis()
-        elif resource.resource_type == "Geopackage":
+        elif self.selected_resource().resource_type == "Style":
+            self.add_style_to_qgis()
+        elif self.selected_resource().resource_type == "Geopackage":
             self.add_geopackage()
 
+    @show_busy_cursor
     def add_model_to_qgis(self):
         resource = self.selected_resource()
         qgis_user_dir = QgsApplication.qgisSettingsDirPath()
@@ -270,11 +271,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         )[0]
 
         if file_path:
-            if not download_resource_file(resource.file, file_path):
-                self.show_warning_message(f"Download failed for {resource.name}")
-            else:
+            if download_resource_file(resource.file, file_path):
                 self.show_success_message(
-                    f"Successfully downloaded {resource.name} to {file_path}"
+                    self.tr(f"Model {resource.name} is added to QGIS")
+                )
+
+            else:
+                self.show_warning_message(
+                    self.tr(f"Download failed for model {resource.name}")
                 )
 
             # Refreshing the processing toolbox
@@ -333,6 +337,27 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.show_success_message("Geopackage successfully added to current project")
 
+    @show_busy_cursor
+    def add_style_to_qgis(self):
+        resource = self.selected_resource()
+        tempdir = Path(
+            "/tmp" if platform.system() == "Darwin" else tempfile.gettempdir()
+        )
+        tempfile_path = Path(tempdir, resource.file.split("/")[-1])
+        download_resource_file(resource.file, tempfile_path, True)
+
+        # Add to QGIS style library
+        style = QgsStyle().defaultStyle()
+        result = style.importXml(str(tempfile_path.absolute()))
+        if result:
+            self.show_success_message(
+                self.tr(f"Style {resource.name} is added to QGIS")
+            )
+        else:
+            self.show_error_message(
+                self.tr(f"Style {resource.name} is not added to QGIS")
+            )
+
     def update_title_bar(self):
         num_total_resources = len(self.resources)
         num_selected_resources = self.proxy_model.rowCount()
@@ -343,70 +368,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
 
 # TODO: do it QGIS task to have
-def download_resource_file(url: str, file_path: str):
+def download_resource_file(url: str, file_path: str, force: bool = False):
     resource_path = Path(file_path)
-    download_file(url, resource_path)
+    download_file(url, resource_path, force)
     if resource_path.exists():
         return resource_path
     else:
         return None
-
-
-def download_resource_thumbnail(url: str, uuid: str):
-    qgis_user_dir = QgsApplication.qgisSettingsDirPath()
-    # Assume it as jpg
-    extension = ".jpg"
-    try:
-        extension = url.split(".")[-1]
-    except IndexError():
-        pass
-
-    thumbnail_dir = Path(qgis_user_dir, "qgis_hub", "thumbnails")
-    thumbnail_path = Path(thumbnail_dir, f"{uuid}.{extension}")
-    if not thumbnail_dir.exists():
-        thumbnail_dir.mkdir(parents=True, exist_ok=True)
-
-    download_file(url, thumbnail_path)
-    if thumbnail_path.exists():
-        return thumbnail_path
-
-
-def shorten_string(text: str) -> str:
-    if len(text) > 20:
-        text = text[:17] + "..."
-    return text
-
-
-class ResourceItem(QStandardItem):
-    ResourceTypeRole = Qt.UserRole + 1
-    NameRole = Qt.UserRole + 2
-    CreatorRole = Qt.UserRole + 3
-
-    def __init__(self, params: dict):
-        super().__init__()
-
-        # Attribute from the QGIS Hub
-        self.resource_type = params.get("resource_type")
-        self.resource_subtype = params.get("resource_subtype", "")
-        self.uuid = params.get("uuid")
-        self.name = params.get("name")
-        self.creator = params.get("creator")
-        upload_date_string = params.get("upload_date")
-        self.upload_date = datetime.fromisoformat(upload_date_string)
-        self.download_count = params.get("download_count")
-        self.description = params.get("description")
-        self.file = params.get("file")
-        self.thumbnail = params.get("thumbnail")
-
-        # Custom attribute
-        self.setText(shorten_string(self.name))
-        self.setToolTip(f"{self.name} by {self.creator}")
-        thumbnail_path = download_resource_thumbnail(self.thumbnail, self.uuid)
-        if thumbnail_path:
-            self.setIcon(QIcon(str(thumbnail_path)))
-        else:
-            self.setIcon(get_icon("qbrowser_icon.svg"))
-
-        self.setData(self.resource_type, self.ResourceTypeRole)
-        self.setData(self.name, self.NameRole)
-        self.setData(self.creator, self.CreatorRole)
