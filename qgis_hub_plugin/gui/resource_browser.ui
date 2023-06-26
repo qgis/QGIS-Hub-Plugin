@@ -184,7 +184,7 @@
            <property name="currentIndex">
             <number>0</number>
            </property>
-           <widget class="QWidget" name="gridViewPage" native="true">
+           <widget class="QWidget" name="gridViewPage">
             <layout class="QVBoxLayout" name="verticalLayout_2">
              <item>
               <widget class="QListView" name="listViewResources">
@@ -213,10 +213,10 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="listViewPage">
+           <widget class="QWidget" name="iconViewPage">
             <layout class="QVBoxLayout" name="verticalLayout_5">
              <item>
-              <widget class="QTreeView" name="treeView"/>
+              <widget class="QTreeView" name="treeViewResources"/>
              </item>
             </layout>
            </widget>
