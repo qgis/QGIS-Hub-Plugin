@@ -34,7 +34,7 @@ class ResourceItem(QStandardItem):
         if thumbnail_path:
             self.setIcon(QIcon(str(thumbnail_path)))
         else:
-            self.setIcon(get_icon("qbrowser_icon.svg"))
+            self.setIcon(get_icon("qhub_logo_2.png"))
 
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
