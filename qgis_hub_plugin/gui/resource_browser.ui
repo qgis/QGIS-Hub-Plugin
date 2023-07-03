@@ -272,12 +272,21 @@
               <property name="text">
                <string>...</string>
               </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QToolButton" name="listViewToolButton">
               <property name="text">
                <string>...</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
               </property>
              </widget>
             </item>

@@ -7,7 +7,7 @@ from qgis.core import Qgis, QgsApplication, QgsStyle
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
-from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItemModel
+from qgis.PyQt.QtGui import QDesktopServices, QIcon, QPixmap, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -41,6 +41,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.parent = parent
         self.iface = iface
         self.log = PlgLogger().log
+
+        # Buttons
+        self.listViewToolButton.setIcon(
+            QgsApplication.getThemeIcon("mActionOpenTable.svg"),
+        )
+        self.iconViewToolButton.setIcon(
+            QgsApplication.getThemeIcon("mActionIconView.svg"),
+        )
 
         self.graphicsScene = QGraphicsScene()
         self.graphicsViewPreview.setScene(self.graphicsScene)
@@ -85,8 +93,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
         self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
 
-        self.listViewToolButton.clicked.connect(self.show_list_view)
-        self.iconViewToolButton.clicked.connect(self.show_icon_view)
+        self.listViewToolButton.toggled.connect(self.show_list_view)
+        self.iconViewToolButton.toggled.connect(self.show_icon_view)
 
         self.reloadPushButton.clicked.connect(
             lambda: self.populate_resources(force_update=True)
