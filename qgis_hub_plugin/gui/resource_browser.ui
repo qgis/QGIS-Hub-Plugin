@@ -278,6 +278,12 @@
               <property name="checked">
                <bool>true</bool>
               </property>
+              <property name="autoRaise">
+               <bool>true</bool>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
              </widget>
             </item>
             <item>
@@ -288,6 +294,12 @@
               <property name="checkable">
                <bool>true</bool>
               </property>
+              <property name="autoRaise">
+               <bool>true</bool>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
              </widget>
             </item>
            </layout>
@@ -567,4 +579,7 @@
    </hints>
   </connection>
  </connections>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
 </ui>
