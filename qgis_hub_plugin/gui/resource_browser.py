@@ -6,8 +6,8 @@ from pathlib import Path
 from qgis.core import Qgis, QgsApplication, QgsStyle
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QRegExp, QSize, Qt, QUrl, pyqtSlot
-from qgis.PyQt.QtGui import QDesktopServices, QIcon, QPixmap, QStandardItemModel
+from qgis.PyQt.QtCore import QItemSelectionModel, QRegExp, QSize, Qt, QUrl, pyqtSlot
+from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -169,6 +169,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
+        # Sync selection
+        selected_indexes = selected.indexes()
+        if selected_indexes:
+            for view in [self.treeViewResources, self.listViewResources]:
+                view.selectionModel().select(
+                    selected_indexes[0], QItemSelectionModel.ClearAndSelect
+                )
+                # The focused item
+                view.setCurrentIndex(selected_indexes[0])
+
         if self.selected_resource():
             self.update_preview()
             self.update_custom_button()
