@@ -301,7 +301,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self,
             self.tr("Save Resource"),
             resource.file,
-            self.tr("ZIP Files (*.zip)"),
+            self.tr("ZIP Files (*.zip);;Geopackage (*.gpkg)"),
         )[0]
 
         if file_path:
