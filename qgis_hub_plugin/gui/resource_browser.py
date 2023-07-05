@@ -318,9 +318,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         if file_path.endswith(".zip"):
             with zipfile.ZipFile(file_path, "r") as zip_ref:
-                zip_ref.extractall(str(extract_location))
                 extracted_folder_name = os.path.splitext(os.path.basename(file_path))[0]
                 extracted_folder_path = extract_location / extracted_folder_name
+                zip_ref.extractall(str(extracted_folder_path))
 
             shapefiles = list(extracted_folder_path.glob("**/*.shp"))
             gpkg_files = list(extracted_folder_path.glob("**/*.gpkg"))
