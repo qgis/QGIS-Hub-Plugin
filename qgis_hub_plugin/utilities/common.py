@@ -25,12 +25,6 @@ def download_file(url: str, file_path: Path, force: bool = False):
     return file_path.exists()
 
 
-def shorten_string(text: str) -> str:
-    if len(text) > 20:
-        text = text[:17] + "..."
-    return text
-
-
 def download_resource_thumbnail(url: str, uuid: str):
     qgis_user_dir = QgsApplication.qgisSettingsDirPath()
     # Assume it as jpg
