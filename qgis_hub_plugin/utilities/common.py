@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from qgis.core import QgsApplication
+from qgis.core import QgsApplication, QgsSettings
 from qgis.PyQt.QtGui import QIcon
 
 from qgis_hub_plugin.__about__ import DIR_PLUGIN_ROOT
@@ -42,3 +42,16 @@ def download_resource_thumbnail(url: str, uuid: str):
     download_file(url, thumbnail_path)
     if thumbnail_path.exists():
         return thumbnail_path
+
+
+def store_settings(setting_key, setting_value):
+    settings = QgsSettings()
+    settings.setValue("QGISResourceHubPlugin/" + setting_key, setting_value)
+
+
+def read_settings(setting_key, default_value):
+    settings = QgsSettings()
+    stored_value = settings.value(
+        "QGISResourceHubPlugin/" + setting_key, defaultValue=default_value
+    )
+    return stored_value

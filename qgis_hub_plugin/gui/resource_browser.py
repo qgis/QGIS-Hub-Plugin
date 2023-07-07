@@ -1,9 +1,17 @@
 import os
 import platform
 import tempfile
+import zipfile
 from pathlib import Path
 
-from qgis.core import Qgis, QgsApplication, QgsStyle
+from qgis.core import (
+    Qgis,
+    QgsApplication,
+    QgsProject,
+    QgsRasterLayer,
+    QgsStyle,
+    QgsVectorLayer,
+)
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QItemSelectionModel, QRegExp, QSize, Qt, QUrl, pyqtSlot
@@ -26,7 +34,12 @@ from qgis_hub_plugin.gui.constants import (
 )
 from qgis_hub_plugin.gui.resource_item import ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger
-from qgis_hub_plugin.utilities.common import download_file, download_resource_thumbnail
+from qgis_hub_plugin.utilities.common import (
+    download_file,
+    download_resource_thumbnail,
+    read_settings,
+    store_settings,
+)
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
@@ -201,6 +214,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.addQGISPushButton.setText(self.tr("Add Model to QGIS"))
         elif self.selected_resource().resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
+        elif self.selected_resource().resource_type == ResoureType.Geopackage:
+            self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
         else:
             self.addQGISPushButton.setVisible(False)
 
@@ -244,10 +259,18 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         resource = self.selected_resource()
         file_extension = os.path.splitext(resource.file)[1]
 
+        # Set the default download location
+        default_download_location = "~/Downloads"
+
+        # Read the stored download location
+        download_location = read_settings("downloadLocation", default_download_location)
+
+        default_path = os.path.join(download_location, os.path.basename(resource.file))
+
         file_path = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Resource"),
-            resource.file,
+            default_path,
             self.tr(
                 "All Files (*);;Geopackage (*.gpkg);;QGIS Model (*.model3);; ZIP Files (*.zip)"
             ),
@@ -267,11 +290,15 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                         QUrl.fromLocalFile(str(Path(file_path).parent))
                     )
 
+                store_settings("downloadLocation", str(Path(file_path).parent))
+
     def add_resource_to_qgis(self):
         if self.selected_resource().resource_type == "Model":
             self.add_model_to_qgis()
         elif self.selected_resource().resource_type == "Style":
             self.add_style_to_qgis()
+        elif self.selected_resource().resource_type == "Geopackage":
+            self.add_geopackage()
 
     @show_busy_cursor
     def add_model_to_qgis(self):
@@ -307,6 +334,75 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             QgsApplication.processingRegistry().providerById(
                 "model"
             ).refreshAlgorithms()
+
+    def add_geopackage(self):
+        resource = self.selected_resource()
+        file_extension = os.path.splitext(resource.file)[1]
+
+        file_path = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Save Resource"),
+            resource.file,
+            self.tr("ZIP Files (*.zip)"),
+        )[0]
+
+        if file_path:
+            if not file_path.endswith(file_extension):
+                file_path = file_path + file_extension
+
+            if not download_resource_file(resource.file, file_path):
+                self.show_warning_message(
+                    self.tr(f"Download failed for {resource.name}")
+                )
+
+        extract_location = Path(os.path.dirname(file_path))
+        current_project = QgsProject.instance()
+
+        if file_path.endswith(".zip"):
+            with zipfile.ZipFile(file_path, "r") as zip_ref:
+                zip_ref.extractall(str(extract_location))
+                extracted_folder_name = os.path.splitext(os.path.basename(file_path))[0]
+                extracted_folder_path = extract_location / extracted_folder_name
+
+            shapefiles = list(extracted_folder_path.glob("**/*.shp"))
+            gpkg_files = list(extracted_folder_path.glob("**/*.gpkg"))
+
+            for shapefile_path in shapefiles:
+                layer_name = shapefile_path.stem
+                layer = QgsVectorLayer(str(shapefile_path), layer_name, "ogr")
+
+                if layer.isValid():
+                    current_project.addMapLayer(layer)
+                else:
+                    self.show_warning_message(self.tr(f"Invalid layer: {layer_name}"))
+
+            for gpkg_file in gpkg_files:
+                layer_name = gpkg_file.stem
+                self.handle_gpkg(current_project, layer_name, str(gpkg_file.absolute()))
+
+        elif file_path.endswith(".gpkg"):
+            self.handle_gpkg(current_project, os.path.basename(file_path), file_path)
+
+    def handle_gpkg(self, current_project, file_name, gpkg_file_path):
+        geopackage = QgsVectorLayer(gpkg_file_path, file_name, "ogr")
+        if geopackage.isValid():
+            # Add all layers from the geopackage to the project
+            layers = geopackage.dataProvider().subLayers()
+            for layer in layers:
+                layer_parts = layer.split("!!::!!")
+                layer_name = layer_parts[1]
+                layer_uri = f"{gpkg_file_path}|layername={layer_name}"
+                vector_layer = QgsVectorLayer(layer_uri, layer_name, "ogr")
+                if vector_layer.isValid():
+                    current_project.addMapLayer(vector_layer)
+                else:
+                    self.show_warning_message(self.tr(f"Invalid layer: {layer_name}"))
+        else:
+            self.show_warning_message(self.tr(f"Invalid geopackage: {gpkg_file_path}"))
+
+        self.show_success_message(
+            self.tr("Geopackage successfully added to current project")
+        )
 
     @show_busy_cursor
     def add_style_to_qgis(self):
