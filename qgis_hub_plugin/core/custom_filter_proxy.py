@@ -13,6 +13,7 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
 
     # Custom sorting by integer
     def lessThan(self, left_index, right_index):
+        # TODO: Replace this with comparison of the data in the Qt::UserRole
         left_data = left_index.data(Qt.DisplayRole)
         right_data = right_index.data(Qt.DisplayRole)
 
