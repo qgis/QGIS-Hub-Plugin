@@ -232,9 +232,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if not pixmap.isNull():
             item = QGraphicsPixmapItem(pixmap)
 
-        self.graphicsViewPreview.scene().clear()
-        self.graphicsViewPreview.scene().addItem(item)
-        self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
+            self.graphicsViewPreview.scene().clear()
+            self.graphicsViewPreview.scene().addItem(item)
+            self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
 
         # Description
         self.labelName.setText(resource.name)
