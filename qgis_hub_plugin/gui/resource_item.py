@@ -3,11 +3,7 @@ from datetime import datetime
 from qgis.PyQt.QtGui import QIcon, QStandardItem
 
 from qgis_hub_plugin.gui.constants import CreatorRole, NameRole, ResourceTypeRole
-from qgis_hub_plugin.utilities.common import (
-    download_resource_thumbnail,
-    get_icon,
-    shorten_string,
-)
+from qgis_hub_plugin.utilities.common import download_resource_thumbnail, get_icon
 
 
 class ResourceItem(QStandardItem):
