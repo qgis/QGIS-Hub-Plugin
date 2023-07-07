@@ -129,7 +129,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         for resource in self.resources:
             item = ResourceItem(resource)
             author = QStandardItem(item.creator)
-            count = QStandardItem(item.download_count)
+            count = QStandardItem(str(item.download_count))
             self.resource_model.appendRow([item, author, count])
 
         if force_update:
@@ -338,10 +338,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def show_list_view(self):
         # Update the selected on other view
         selected_indexes = self.treeViewResources.selectionModel().selectedIndexes()
-        self.listViewResources.selectionModel().select(
-            selected_indexes[0], QItemSelectionModel.ClearAndSelect
-        )
-        self.listViewResources.setCurrentIndex(selected_indexes[0])
+        if selected_indexes:
+            self.listViewResources.selectionModel().select(
+                selected_indexes[0], QItemSelectionModel.ClearAndSelect
+            )
+            self.listViewResources.setCurrentIndex(selected_indexes[0])
 
         # Show the list view
         self.viewStackedWidget.setCurrentIndex(1)
@@ -349,10 +350,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def show_icon_view(self):
         # Update the selected on other view
         selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
-        self.treeViewResources.selectionModel().select(
-            selected_indexes[0], QItemSelectionModel.ClearAndSelect
-        )
-        self.treeViewResources.setCurrentIndex(selected_indexes[0])
+        if selected_indexes:
+            self.treeViewResources.selectionModel().select(
+                selected_indexes[0], QItemSelectionModel.ClearAndSelect
+            )
+            self.treeViewResources.setCurrentIndex(selected_indexes[0])
 
         # Show the icon (grid) view
         self.viewStackedWidget.setCurrentIndex(0)
