@@ -11,6 +11,20 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
         self.checkbox_states = {}
         self.log = PlgLogger().log
 
+    # Custom sorting by integer
+    def lessThan(self, left_index, right_index):
+        left_data = left_index.data(Qt.DisplayRole)
+        right_data = right_index.data(Qt.DisplayRole)
+
+        try:
+            left_int = int(left_data)
+            right_int = int(right_data)
+
+            return left_int < right_int
+
+        except ValueError:
+            return super().lessThan(left_index, right_index)
+
     def setRolesToFilter(self, roles):
         self.roles_to_filter = roles
         self.invalidateFilter()
