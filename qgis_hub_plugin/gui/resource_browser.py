@@ -62,8 +62,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.resources = []
         self.checkbox_states = {}
         self.update_checkbox_states()
-        self.resource_model = QStandardItemModel(0, 3)
-        self.resource_model.setHorizontalHeaderLabels(["Name", "Age", "Country"])
+        self.resource_model = QStandardItemModel()
 
         self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
@@ -102,6 +101,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             lambda: self.populate_resources(force_update=True)
         )
 
+        self.show_icon_view()
         self.hide_preview()
 
     def show_success_message(self, text):
@@ -125,6 +125,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.resources = response.get("results", {})
 
         self.resource_model.clear()
+        self.resource_model.setHorizontalHeaderLabels(["Name", "Creator", "Download"])
         # TODO: Make sure it also show other attribute
         for resource in self.resources:
             item = ResourceItem(resource)
@@ -135,6 +136,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if force_update:
             self.show_success_message("Successfully populated the resources")
 
+        self.resize_columns()
         self.update_title_bar()
 
     def update_checkbox_states(self):
@@ -358,6 +360,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Show the icon (grid) view
         self.viewStackedWidget.setCurrentIndex(0)
+
+    def resize_columns(self):
+        if self.resource_model.rowCount() > 0:
+            for i in range(self.resource_model.columnCount()):
+                self.treeViewResources.resizeColumnToContents(i)
 
 
 # TODO: do it QGIS task to have

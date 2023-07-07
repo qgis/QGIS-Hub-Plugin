@@ -1,6 +1,7 @@
-from qgis.PyQt.QtCore import QSortFilterProxyModel
+from qgis.PyQt.QtCore import QSortFilterProxyModel, Qt
 
 from qgis_hub_plugin.gui.constants import ResourceTypeRole
+from qgis_hub_plugin.toolbelt import PlgLogger
 
 
 class MultiRoleFilterProxyModel(QSortFilterProxyModel):
@@ -8,6 +9,7 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
         super().__init__(parent)
         self.roles_to_filter = []
         self.checkbox_states = {}
+        self.log = PlgLogger().log
 
     def setRolesToFilter(self, roles):
         self.roles_to_filter = roles
