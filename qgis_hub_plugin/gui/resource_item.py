@@ -28,7 +28,7 @@ class ResourceItem(QStandardItem):
         self.thumbnail = params.get("thumbnail")
 
         # Custom attribute
-        self.setText(shorten_string(self.name))
+        self.setText(self.name)
         self.setToolTip(f"{self.name} by {self.creator}")
         thumbnail_path = download_resource_thumbnail(self.thumbnail, self.uuid)
         if thumbnail_path:

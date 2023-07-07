@@ -7,7 +7,7 @@ from qgis.core import Qgis, QgsApplication, QgsStyle
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QItemSelectionModel, QRegExp, QSize, Qt, QUrl, pyqtSlot
-from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItemModel
+from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -62,13 +62,15 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.resources = []
         self.checkbox_states = {}
         self.update_checkbox_states()
-        self.resource_model = QStandardItemModel()
+        self.resource_model = QStandardItemModel(0, 3)
+        self.resource_model.setHorizontalHeaderLabels(["Name", "Age", "Country"])
 
         self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
 
         self.listViewResources.setModel(self.proxy_model)
         self.treeViewResources.setModel(self.proxy_model)
+        self.treeViewResources.setSortingEnabled(True)
 
         self.listViewResources.selectionModel().selectionChanged.connect(
             self.on_resource_selection_changed
@@ -126,7 +128,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # TODO: Make sure it also show other attribute
         for resource in self.resources:
             item = ResourceItem(resource)
-            self.resource_model.appendRow(item)
+            author = QStandardItem(item.creator)
+            count = QStandardItem(item.download_count)
+            self.resource_model.appendRow([item, author, count])
 
         if force_update:
             self.show_success_message("Successfully populated the resources")
@@ -169,25 +173,19 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
-        # Sync selection
-        selected_indexes = selected.indexes()
-        if selected_indexes:
-            for view in [self.treeViewResources, self.listViewResources]:
-                view.selectionModel().select(
-                    selected_indexes[0], QItemSelectionModel.ClearAndSelect
-                )
-                # The focused item
-                view.setCurrentIndex(selected_indexes[0])
-
         if self.selected_resource():
             self.update_preview()
             self.update_custom_button()
         else:
-            self.log("no resource selected")
+            self.log("No resource selected")
 
     def selected_resource(self):
-        # TODO: Check mode grid or list, and probably updated the selected resource on other view
-        selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
+        selected_indexes = []
+        if self.viewStackedWidget.currentIndex() == 0:
+            selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
+        elif self.viewStackedWidget.currentIndex() == 1:
+            selected_indexes = self.treeViewResources.selectionModel().selectedIndexes()
+
         if len(selected_indexes) > 0:
             proxy_index = selected_indexes[0]
             source_index = self.proxy_model.mapToSource(proxy_index)
@@ -338,9 +336,25 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.setWindowTitle(window_title)
 
     def show_list_view(self):
+        # Update the selected on other view
+        selected_indexes = self.treeViewResources.selectionModel().selectedIndexes()
+        self.listViewResources.selectionModel().select(
+            selected_indexes[0], QItemSelectionModel.ClearAndSelect
+        )
+        self.listViewResources.setCurrentIndex(selected_indexes[0])
+
+        # Show the list view
         self.viewStackedWidget.setCurrentIndex(1)
 
     def show_icon_view(self):
+        # Update the selected on other view
+        selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
+        self.treeViewResources.selectionModel().select(
+            selected_indexes[0], QItemSelectionModel.ClearAndSelect
+        )
+        self.treeViewResources.setCurrentIndex(selected_indexes[0])
+
+        # Show the icon (grid) view
         self.viewStackedWidget.setCurrentIndex(0)
 
 
