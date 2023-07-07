@@ -2,28 +2,24 @@ import os
 import platform
 import tempfile
 import zipfile
+from functools import partial
 from pathlib import Path
 
-from qgis.core import (
-    Qgis,
-    QgsApplication,
-    QgsProject,
-    QgsRasterLayer,
-    QgsStyle,
-    QgsVectorLayer,
-)
+from qgis.core import Qgis, QgsApplication, QgsProject, QgsStyle, QgsVectorLayer
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QItemSelectionModel, QRegExp, QSize, Qt, QUrl, pyqtSlot
 from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
     QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QGraphicsPixmapItem,
     QGraphicsScene,
     QSizePolicy,
 )
 
+from qgis_hub_plugin.__about__ import __uri_homepage__
 from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.gui.constants import (
@@ -106,6 +102,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.listViewToolButton.toggled.connect(self.show_list_view)
         self.iconViewToolButton.toggled.connect(self.show_icon_view)
+
+        self.buttonBox.button(QDialogButtonBox.Help).clicked.connect(
+            partial(QDesktopServices.openUrl, QUrl(__uri_homepage__))
+        )
 
         # Match with the size of the thumbnail
         self.iconSizeSlider.setMinimum(20)
