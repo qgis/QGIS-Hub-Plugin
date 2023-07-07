@@ -91,9 +91,6 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.on_resource_selection_changed
         )
 
-        # TODO(IS): make user able to change the icon size
-        self.listViewResources.setIconSize(QSize(96, 96))
-
         # Load resource for the first time
         self.populate_resources()
 
@@ -110,10 +107,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.listViewToolButton.toggled.connect(self.show_list_view)
         self.iconViewToolButton.toggled.connect(self.show_icon_view)
 
+        # Match with the size of the thumbnail
+        self.iconSizeSlider.setMinimum(20)
+        self.iconSizeSlider.setMaximum(128)
+        self.iconSizeSlider.valueChanged.connect(self.update_icon_size)
+
         self.reloadPushButton.clicked.connect(
             lambda: self.populate_resources(force_update=True)
         )
 
+        middle_value = int(
+            self.iconSizeSlider.minimum()
+            + (self.iconSizeSlider.maximum() - self.iconSizeSlider.minimum()) / 2
+        )
+        # TODO: store the last value
+        self.iconSizeSlider.setValue(middle_value)
         self.show_icon_view()
         self.hide_preview()
 
@@ -461,6 +469,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if self.resource_model.rowCount() > 0:
             for i in range(self.resource_model.columnCount()):
                 self.treeViewResources.resizeColumnToContents(i)
+
+    def update_icon_size(self, size):
+        self.listViewResources.setIconSize(QSize(size, size))
 
 
 # TODO: do it QGIS task to have
