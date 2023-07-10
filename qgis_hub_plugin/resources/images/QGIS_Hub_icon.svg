@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1" x="0px" y="0px" width="128px" height="128px" viewBox="0 0 128 128" enable-background="new 0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="402.5244" y1="-220.8706" x2="400.6479" y2="-97.5023" gradientTransform="matrix(1, 0, 0, -1, -300.519501, -92.554703)">
+    <stop offset="0" style="stop-color:#589632"/>
+    <stop offset="1" style="stop-color:#93B023"/>
+  </linearGradient>
+  <linearGradient id="SVGID_2_" gradientUnits="userSpaceOnUse" x1="365.4619" y1="-221.1455" x2="363.5923" y2="-98.227" gradientTransform="matrix(1, 0, 0, -1, -300.519501, -92.554703)">
+    <stop offset="0" style="stop-color:#589632"/>
+    <stop offset="1" style="stop-color:#93B023"/>
+  </linearGradient>
+  <g style="" transform="matrix(0.504556, 0, 0, 0.504556, 29.345972, 0.257032)">
+    <polygon fill="#EE7913" points="68.613 69.625 86.891 69.625 71.697 54.625 52.613 54.625 52.613 72.746 68.613 88.548" style=""/>
+    <polygon fill="url(#SVGID_1_)" points="126.613 109.057 94.488 77.625 76.613 77.625 76.613 96.033 107.143 126.625 126.613 126.625" style=""/>
+    <polygon fill="#F0E64A" points="76.613 77.625 94.488 77.625 86.891 69.625 68.613 69.625 68.613 88.548 76.613 96.033" style=""/>
+    <path fill="url(#SVGID_2_)" d="M 68.923 101.552 C 67.758 101.794 67.154 101.709 64.238 101.709 C 43.372 101.709 25.626 84.551 25.626 62.303 C 25.626 40.055 43.177 23.276 64.238 23.276 C 85.299 23.276 102.071 40.056 102.071 62.303 C 102.071 65.922 101.62 69.402 100.787 72.701 L 120.1 92.012 C 125.079 83.286 127.865 73.143 127.865 62.155 C 127.865 27.866 100.502 2.192 63.849 2.192 C 27.363 2.191 0 27.696 0 62.154 C 0 96.779 27.363 122.792 63.848 122.792 C 73.265 122.792 79.917 121.323 86.89 119.031 L 68.923 101.552 Z" style=""/>
+    <polygon opacity="0.15" fill="#FFFFFF" enable-background="new    " points="53.083 54.625 71.697 54.625 126.613 109.057 126.613 126.625" style=""/>
+  </g>
+  <text style="fill: rgb(116, 154, 59); font-family: &quot;Noto Sans Mono&quot;; font-size: 72px; font-weight: 700; paint-order: fill; text-transform: capitalize; white-space: pre;" transform="matrix(1, -0.000079, 0.000079, 1, -54.667953, 3.35885)" x="53.822" y="121.642">hub</text>
+</svg>

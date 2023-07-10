@@ -70,7 +70,7 @@ class QgisHubPluginPlugin:
 
         # -- Actions
         self.action_resource_browser = QAction(
-            get_icon("qbrowser_icon.svg"),
+            get_icon("QGIS_Hub_icon.svg"),
             self.tr("Open Resource Browser"),
             self.iface.mainWindow(),
         )
