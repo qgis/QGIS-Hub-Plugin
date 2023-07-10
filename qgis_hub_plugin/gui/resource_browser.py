@@ -28,7 +28,7 @@ from qgis_hub_plugin.gui.constants import (
     ResourceTypeRole,
     ResoureType,
 )
-from qgis_hub_plugin.gui.resource_item import ResourceItem
+from qgis_hub_plugin.gui.resource_item import AttributeSortingItem, ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.common import (
     download_file,
@@ -151,7 +151,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             item = ResourceItem(resource)
             author = QStandardItem(item.creator)
             # TODO: create a custom QStandarItem to store the count as an integer
-            count = QStandardItem(str(item.download_count))
+            count = AttributeSortingItem(str(item.download_count), item.download_count)
             self.resource_model.appendRow([item, author, count])
 
         if force_update:

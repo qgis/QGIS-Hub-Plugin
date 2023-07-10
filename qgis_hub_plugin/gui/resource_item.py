@@ -2,7 +2,12 @@ from datetime import datetime
 
 from qgis.PyQt.QtGui import QIcon, QStandardItem
 
-from qgis_hub_plugin.gui.constants import CreatorRole, NameRole, ResourceTypeRole
+from qgis_hub_plugin.gui.constants import (
+    CreatorRole,
+    NameRole,
+    ResourceTypeRole,
+    SortingRole,
+)
 from qgis_hub_plugin.utilities.common import download_resource_thumbnail, get_icon
 
 
@@ -35,3 +40,9 @@ class ResourceItem(QStandardItem):
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
         self.setData(self.creator, CreatorRole)
+
+
+class AttributeSortingItem(QStandardItem):
+    def __init__(self, display, value):
+        super().__init__(display)
+        self.setData(value, SortingRole)
