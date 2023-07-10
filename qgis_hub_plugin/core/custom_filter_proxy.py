@@ -1,6 +1,6 @@
 from qgis.PyQt.QtCore import QSortFilterProxyModel, Qt
 
-from qgis_hub_plugin.gui.constants import ResourceTypeRole
+from qgis_hub_plugin.gui.constants import ResourceTypeRole, SortingRole
 from qgis_hub_plugin.toolbelt import PlgLogger
 
 
@@ -13,15 +13,14 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
 
     # Custom sorting by integer
     def lessThan(self, left_index, right_index):
-        # TODO: Replace this with comparison of the data in the Qt::UserRole
-        left_data = left_index.data(Qt.DisplayRole)
-        right_data = right_index.data(Qt.DisplayRole)
+        left_data = left_index.data(SortingRole)
+        right_data = right_index.data(SortingRole)
+
+        if left_data is None or right_data is None:
+            return super().lessThan(left_index, right_index)
 
         try:
-            left_int = int(left_data)
-            right_int = int(right_data)
-
-            return left_int < right_int
+            return left_data < right_data
 
         except ValueError:
             return super().lessThan(left_index, right_index)
