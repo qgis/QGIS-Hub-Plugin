@@ -146,13 +146,18 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.resources = response.get("results", {})
 
         self.resource_model.clear()
-        self.resource_model.setHorizontalHeaderLabels(["Name", "Creator", "Download"])
+        self.resource_model.setHorizontalHeaderLabels(
+            ["Name", "Creator", "Download", "Uploaded"]
+        )
         for resource in self.resources:
             item = ResourceItem(resource)
             author = QStandardItem(item.creator)
-            # TODO: create a custom QStandarItem to store the count as an integer
-            count = AttributeSortingItem(str(item.download_count), item.download_count)
-            self.resource_model.appendRow([item, author, count])
+            download_count = AttributeSortingItem(
+                str(item.download_count), item.download_count
+            )
+            pretty_date = item.upload_date.strftime("%-d %B %Y")
+            upload_date = AttributeSortingItem(pretty_date, item.upload_date)
+            self.resource_model.appendRow([item, author, download_count, upload_date])
 
         if force_update:
             self.show_success_message("Successfully populated the resources")
