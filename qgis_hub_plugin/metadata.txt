@@ -4,7 +4,7 @@ about=A QGIS plugin to fetch resources from the QGIS Hub
 category=Web
 hasProcessingProvider=no
 description=A QGIS plugin to fetch resources from the QGIS Hub
-icon=resources/images/default_icon.png
+icon=resources/images/QGIS_Hub_icon.svg
 tags=style, model, layer, resource, 3d model, project, hub
 
 # credits and contact
