@@ -25,10 +25,10 @@ A QGIS plugins to fetch resources from the QGIS Hub
 | Plugin with processing provider  |                          no                           |
 | Author name                      |                     Ismail Sunni                      |
 | Author organization              |                      Camptocamp                       |
-| Author email                     |                 imajimatika@gmail.com                 |
+| Author email                     |                <imajimatika@gmail.com>                |
 | Minimum QGIS version             |                         3.28                          |
 | Maximum QGIS version             |                         3.99                          |
-| Git repository URL               |        https://github.com/qgis/QGIS-Hub-Plugin        |
+| Git repository URL               |       <https://github.com/qgis/QGIS-Hub-Plugin>       |
 | Git default branch               |                         main                          |
 | License                          |                         GPLv3                         |
 | Python linter                    |                        Flake8                         |
