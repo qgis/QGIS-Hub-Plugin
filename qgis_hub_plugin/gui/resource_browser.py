@@ -8,7 +8,15 @@ from pathlib import Path
 from qgis.core import Qgis, QgsApplication, QgsProject, QgsStyle, QgsVectorLayer
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QItemSelectionModel, QRegExp, QSize, Qt, QUrl, pyqtSlot
+from qgis.PyQt.QtCore import (
+    QByteArray,
+    QItemSelectionModel,
+    QRegExp,
+    QSize,
+    Qt,
+    QUrl,
+    pyqtSlot,
+)
 from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -29,7 +37,7 @@ from qgis_hub_plugin.gui.constants import (
     ResoureType,
 )
 from qgis_hub_plugin.gui.resource_item import AttributeSortingItem, ResourceItem
-from qgis_hub_plugin.toolbelt import PlgLogger
+from qgis_hub_plugin.toolbelt import PlgLogger, PlgOptionsManager
 from qgis_hub_plugin.utilities.common import (
     download_file,
     download_resource_thumbnail,
@@ -50,6 +58,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.parent = parent
         self.iface = iface
         self.log = PlgLogger().log
+        self.plg_settings = PlgOptionsManager()
 
         # Buttons
         self.listViewToolButton.setIcon(
@@ -115,15 +124,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.reloadPushButton.clicked.connect(
             lambda: self.populate_resources(force_update=True)
         )
-
-        middle_value = int(
-            self.iconSizeSlider.minimum()
-            + (self.iconSizeSlider.maximum() - self.iconSizeSlider.minimum()) / 2
-        )
-        # TODO: store the last value
-        self.iconSizeSlider.setValue(middle_value)
-        self.show_icon_view()
+        self.buttonBox.rejected.connect(self.store_setting)
+        self.restore_setting()
         self.hide_preview()
+
+    def closeEvent(self, event):
+        self.store_setting()
+        super().closeEvent(event)
 
     def show_success_message(self, text):
         return self.message_bar.pushMessage(self.tr("Success"), text, Qgis.Success, 5)
@@ -133,6 +140,54 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def show_warning_message(self, text):
         return self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
+
+    def store_setting(self):
+        # Download directory check box
+        self.plg_settings.set_value_from_key(
+            "download_checkbox", self.checkBoxOpenDirectory.isChecked()
+        )
+
+        # Value in iconSizeSlider
+        self.plg_settings.set_value_from_key("icon_size", self.iconSizeSlider.value())
+
+        # List or grid view
+        self.plg_settings.set_value_from_key(
+            "current_view_index", self.viewStackedWidget.currentIndex()
+        )
+
+        # Geometry
+        self.plg_settings.set_value_from_key("dialog_geometry", self.saveGeometry())
+
+    def restore_setting(self):
+        # Download directory check box
+        self.checkBoxOpenDirectory.setChecked(
+            self.plg_settings.get_value_from_key("download_checkbox", True, bool)
+        )
+
+        # Value in iconSizeSlider
+        middle_value = int(
+            self.iconSizeSlider.minimum()
+            + (self.iconSizeSlider.maximum() - self.iconSizeSlider.minimum()) / 2
+        )
+        self.iconSizeSlider.setValue(
+            self.plg_settings.get_value_from_key("icon_size", middle_value, int)
+        )
+
+        # List or grid view
+        current_view_index = self.plg_settings.get_value_from_key(
+            "current_view_index", 0, int
+        )
+        self.viewStackedWidget.setCurrentIndex(current_view_index)
+        # May be there is a better way to do this
+        self.iconViewToolButton.setChecked(current_view_index == 0)
+        self.listViewToolButton.setChecked(current_view_index == 1)
+
+        # Geometry
+        geometry = self.plg_settings.get_value_from_key(
+            "dialog_geometry", None, QByteArray
+        )
+        if geometry is not None:
+            self.restoreGeometry(geometry)
 
     @show_busy_cursor
     def populate_resources(self, force_update=False):
