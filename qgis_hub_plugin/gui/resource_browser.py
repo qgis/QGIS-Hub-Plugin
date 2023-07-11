@@ -370,9 +370,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 file_path = file_path + file_extension
 
             if not download_resource_file(resource.file, file_path):
-                self.show_warning_message(
-                    self.tr(f"Download failed for {resource.name}")
-                )
+                self.show_error_message(self.tr(f"Download failed for {resource.name}"))
                 return
 
         extract_location = Path(os.path.dirname(file_path))
@@ -399,16 +397,34 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             for gpkg_file in gpkg_files:
                 layer_name = gpkg_file.stem
                 self.load_geopackage(
-                    current_project, layer_name, str(gpkg_file.absolute())
+                    current_project,
+                    layer_name,
+                    str(gpkg_file.absolute()),
+                    resource_name=resource.name,
                 )
 
         elif file_path.endswith(".gpkg"):
             self.load_geopackage(
-                current_project, os.path.basename(file_path), file_path
+                current_project,
+                os.path.basename(file_path),
+                file_path,
+                resource_name=resource.name,
+            )
+        else:
+            self.show_error_message(
+                self.tr(
+                    "Only Geopackage and zip file are supported. File is {file_path}".format(
+                        file_path=file_path
+                    )
+                )
             )
 
-    def load_geopackage(self, project, layer_name, gpkg_file_path):
+    def load_geopackage(
+        self, project, layer_name, gpkg_file_path, resource_name: str = ""
+    ):
         geopackage = QgsVectorLayer(gpkg_file_path, layer_name, "ogr")
+        if not resource_name:
+            resource_name = os.path.basename(gpkg_file_path)
         if geopackage.isValid():
             # Add all layers from the geopackage to the project
             layers = geopackage.dataProvider().subLayers()
@@ -423,12 +439,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     valid_layer_num += 1
                 else:
                     self.show_warning_message(self.tr(f"Invalid layer: {layer_name}"))
-
-            self.show_success_message(
-                self.tr(
-                    f"Successfully load {valid_layer_num} of {len(layers)} from {layer_name}"
-                )
+            message = self.tr(
+                f"Successfully load {valid_layer_num} of {len(layers)} layers from {resource_name}"
             )
+            self.show_success_message(message)
         else:
             self.show_warning_message(self.tr(f"Invalid geopackage: {gpkg_file_path}"))
 
