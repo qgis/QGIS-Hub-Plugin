@@ -317,36 +317,29 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def add_model_to_qgis(self):
         resource = self.selected_resource()
         qgis_user_dir = QgsApplication.qgisSettingsDirPath()
-        default_model_path = Path(qgis_user_dir, "processing", "models")
-        if not default_model_path.exists():
-            default_model_path.mkdir(parents=True, exist_ok=True)
 
-        default_model_path = os.path.join(
-            default_model_path, os.path.basename(resource.file)
+        # Automatically download to qgis_hub subdirectory
+        custom_model_directory = Path(qgis_user_dir, "processing", "models", "qgis_hub")
+        if not custom_model_directory.exists():
+            custom_model_directory.mkdir(parents=True, exist_ok=True)
+
+        file_path = os.path.join(
+            custom_model_directory, os.path.basename(resource.file)
         )
 
-        file_path = QFileDialog.getSaveFileName(
-            self,
-            self.tr("Save Model"),
-            str(default_model_path),
-            self.tr("QGIS Model (*.model3)"),
-        )[0]
-
-        if file_path:
-            if download_resource_file(resource.file, file_path):
-                self.show_success_message(
-                    self.tr(f"Model {resource.name} is added to QGIS")
-                )
-
-            else:
-                self.show_warning_message(
-                    self.tr(f"Download failed for model {resource.name}")
-                )
-
+        if download_resource_file(resource.file, file_path):
             # Refreshing the processing toolbox
             QgsApplication.processingRegistry().providerById(
                 "model"
             ).refreshAlgorithms()
+            self.show_success_message(
+                self.tr(f"Model {resource.name} is added to QGIS")
+            )
+
+        else:
+            self.show_warning_message(
+                self.tr(f"Download failed for model {resource.name}")
+            )
 
     @show_busy_cursor
     def add_geopackage_to_qgis(self):
