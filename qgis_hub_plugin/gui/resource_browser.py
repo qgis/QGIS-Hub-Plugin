@@ -306,12 +306,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 store_settings("downloadLocation", str(Path(file_path).parent))
 
     def add_resource_to_qgis(self):
-        if self.selected_resource().resource_type == "Model":
+        if self.selected_resource().resource_type == ResoureType.Model:
             self.add_model_to_qgis()
-        elif self.selected_resource().resource_type == "Style":
+        elif self.selected_resource().resource_type == ResoureType.Style:
             self.add_style_to_qgis()
-        elif self.selected_resource().resource_type == "Geopackage":
-            self.add_geopackage()
+        elif self.selected_resource().resource_type == ResoureType.Geopackage:
+            self.add_geopackage_to_qgis()
 
     @show_busy_cursor
     def add_model_to_qgis(self):
@@ -348,15 +348,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 "model"
             ).refreshAlgorithms()
 
-    def add_geopackage(self):
+    @show_busy_cursor
+    def add_geopackage_to_qgis(self):
         resource = self.selected_resource()
         file_extension = os.path.splitext(resource.file)[1]
+        file_filter = self.tr("All files (*)")
+        if file_extension == ".gpkg":
+            file_filter = self.tr("Geopackage (*.gpkg)") + ";;" + file_filter
+        elif file_extension == ".zip":
+            file_filter = self.tr("ZIP Files (*.zip)") + ";;" + file_filter
 
         file_path = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Resource"),
             resource.file,
-            self.tr("ZIP Files (*.zip)"),
+            file_filter,
         )[0]
 
         if file_path:
@@ -367,6 +373,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 self.show_warning_message(
                     self.tr(f"Download failed for {resource.name}")
                 )
+                return
 
         extract_location = Path(os.path.dirname(file_path))
         current_project = QgsProject.instance()
@@ -391,31 +398,39 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
             for gpkg_file in gpkg_files:
                 layer_name = gpkg_file.stem
-                self.handle_gpkg(current_project, layer_name, str(gpkg_file.absolute()))
+                self.load_geopackage(
+                    current_project, layer_name, str(gpkg_file.absolute())
+                )
 
         elif file_path.endswith(".gpkg"):
-            self.handle_gpkg(current_project, os.path.basename(file_path), file_path)
+            self.load_geopackage(
+                current_project, os.path.basename(file_path), file_path
+            )
 
-    def handle_gpkg(self, current_project, file_name, gpkg_file_path):
-        geopackage = QgsVectorLayer(gpkg_file_path, file_name, "ogr")
+    def load_geopackage(self, project, layer_name, gpkg_file_path):
+        geopackage = QgsVectorLayer(gpkg_file_path, layer_name, "ogr")
         if geopackage.isValid():
             # Add all layers from the geopackage to the project
             layers = geopackage.dataProvider().subLayers()
+            valid_layer_num = 0
             for layer in layers:
                 layer_parts = layer.split("!!::!!")
                 layer_name = layer_parts[1]
                 layer_uri = f"{gpkg_file_path}|layername={layer_name}"
                 vector_layer = QgsVectorLayer(layer_uri, layer_name, "ogr")
                 if vector_layer.isValid():
-                    current_project.addMapLayer(vector_layer)
+                    project.addMapLayer(vector_layer)
+                    valid_layer_num += 1
                 else:
                     self.show_warning_message(self.tr(f"Invalid layer: {layer_name}"))
+
+            self.show_success_message(
+                self.tr(
+                    f"Successfully load {valid_layer_num} of {len(layers)} from {layer_name}"
+                )
+            )
         else:
             self.show_warning_message(self.tr(f"Invalid geopackage: {gpkg_file_path}"))
-
-        self.show_success_message(
-            self.tr("Geopackage successfully added to current project")
-        )
 
     @show_busy_cursor
     def add_style_to_qgis(self):
