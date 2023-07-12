@@ -224,7 +224,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             download_count = AttributeSortingItem(
                 str(item.download_count), item.download_count
             )
-            pretty_date = item.upload_date.strftime("%-d %B %Y")
+            pretty_date = item.upload_date.strftime("%d %B %Y").lstrip("0")
             upload_date = AttributeSortingItem(pretty_date, item.upload_date)
             self.resource_model.appendRow([item, author, download_count, upload_date])
 
@@ -336,7 +336,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.labelSubtype.setText(resource.resource_subtype)
         self.labelCreator.setText(resource.creator)
         self.labelDownloadCount.setText(str(resource.download_count))
-        pretty_upload_date = resource.upload_date.strftime("%-d %B %Y")
+        pretty_upload_date = resource.upload_date.strftime("%d %B %Y").lstrip("0")
         self.labelUploaded.setText(pretty_upload_date)
         self.textBrowserDescription.setHtml(resource.description)
 
