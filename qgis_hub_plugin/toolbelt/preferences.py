@@ -28,6 +28,9 @@ class PlgSettingsStructure:
     debug_mode: bool = False
     version: str = __version__
 
+    # State
+    download_location: str = "~/Downloads"
+
     # UI
     icon_size: int = 64
     download_checkbox: bool = False

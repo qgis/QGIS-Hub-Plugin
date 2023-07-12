@@ -38,12 +38,7 @@ from qgis_hub_plugin.gui.constants import (
 )
 from qgis_hub_plugin.gui.resource_item import AttributeSortingItem, ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger, PlgOptionsManager
-from qgis_hub_plugin.utilities.common import (
-    download_file,
-    download_resource_thumbnail,
-    read_settings,
-    store_settings,
-)
+from qgis_hub_plugin.utilities.common import download_file, download_resource_thumbnail
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
@@ -327,14 +322,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         resource = self.selected_resource()
         file_extension = os.path.splitext(resource.file)[1]
 
-        # Set the default download location
-        default_download_location = "~/Downloads"
-
         # Read the stored download location
-        download_location = read_settings("downloadLocation", default_download_location)
+        download_location = self.plg_settings.get_value_from_key(
+            "download_location", exp_type=str
+        )
 
         default_path = os.path.join(download_location, os.path.basename(resource.file))
 
+        # Set filter based on the extension
         file_path = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Resource"),
@@ -358,7 +353,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                         QUrl.fromLocalFile(str(Path(file_path).parent))
                     )
 
-                store_settings("downloadLocation", str(Path(file_path).parent))
+                self.plg_settings.set_value_from_key(
+                    "download_location", str(Path(file_path).parent)
+                )
 
     def add_resource_to_qgis(self):
         if self.selected_resource().resource_type == ResoureType.Model:
