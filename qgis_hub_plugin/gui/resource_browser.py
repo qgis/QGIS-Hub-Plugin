@@ -76,14 +76,40 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.selected_resource = None
         self.checkbox_states = {}
         self.update_checkbox_states()
-        self.resource_model = QStandardItemModel()
 
+        self.resource_model = QStandardItemModel()
         self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
 
         self.listViewResources.setModel(self.proxy_model)
         self.treeViewResources.setModel(self.proxy_model)
         self.treeViewResources.setSortingEnabled(True)
+
+        # Load resource for the first time
+        self.populate_resources()
+
+        # Tooltip
+        self.buttonBox.button(QDialogButtonBox.Help).setToolTip(
+            self.tr("Open the help page")
+        )
+        self.listViewToolButton.setToolTip(self.tr("List view"))
+        self.iconViewToolButton.setToolTip(self.tr("Icon view"))
+        self.iconSizeSlider.setToolTip(self.tr("Thumbnail size"))
+        self.checkBoxOpenDirectory.setToolTip(
+            self.tr("Enable this to open the download directory after download")
+        )
+        self.reloadPushButton.setToolTip(
+            self.tr("Update resources from the QGIS Hub website")
+        )
+        self.lineEditSearch.setToolTip(
+            self.tr("Search resource by the name or the creator")
+        )
+        self.pushButtonDownload.setToolTip(
+            self.tr("Download selected resource to your local disk")
+        )
+
+        # Signal handler
+        self.lineEditSearch.textChanged.connect(self.on_filter_text_changed)
 
         self.listViewResources.selectionModel().selectionChanged.connect(
             self.on_resource_selection_changed
@@ -92,35 +118,27 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.on_resource_selection_changed
         )
 
-        # Load resource for the first time
-        self.populate_resources()
-
-        self.lineEditSearch.textChanged.connect(self.on_filter_text_changed)
-
         self.pushButtonDownload.clicked.connect(self.download_resource)
-
         self.addQGISPushButton.clicked.connect(self.add_resource_to_qgis)
+        self.listViewToolButton.toggled.connect(self.show_list_view)
+        self.iconViewToolButton.toggled.connect(self.show_icon_view)
+        self.buttonBox.button(QDialogButtonBox.Help).clicked.connect(
+            partial(QDesktopServices.openUrl, QUrl(__uri_homepage__))
+        )
+        self.reloadPushButton.clicked.connect(
+            lambda: self.populate_resources(force_update=True)
+        )
+        self.buttonBox.rejected.connect(self.store_setting)
 
         self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
         self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
-
-        self.listViewToolButton.toggled.connect(self.show_list_view)
-        self.iconViewToolButton.toggled.connect(self.show_icon_view)
-
-        self.buttonBox.button(QDialogButtonBox.Help).clicked.connect(
-            partial(QDesktopServices.openUrl, QUrl(__uri_homepage__))
-        )
 
         # Match with the size of the thumbnail
         self.iconSizeSlider.setMinimum(20)
         self.iconSizeSlider.setMaximum(128)
         self.iconSizeSlider.valueChanged.connect(self.update_icon_size)
 
-        self.reloadPushButton.clicked.connect(
-            lambda: self.populate_resources(force_update=True)
-        )
-        self.buttonBox.rejected.connect(self.store_setting)
         self.restore_setting()
         self.hide_preview()
 
@@ -211,7 +229,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.resource_model.appendRow([item, author, download_count, upload_date])
 
         if force_update:
-            self.show_success_message("Successfully populated the resources")
+            self.show_success_message("Successfully update the resources")
 
         self.resize_columns()
         self.update_title_bar()
@@ -278,10 +296,17 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.addQGISPushButton.setVisible(True)
         if self.selected_resource.resource_type == ResoureType.Model:
             self.addQGISPushButton.setText(self.tr("Add Model to QGIS"))
+            self.addQGISPushButton.setToolTip(self.tr("Add the model to QGIS directly"))
         elif self.selected_resource.resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
+            self.addQGISPushButton.setToolTip(
+                self.tr("Add the style to QGIS style database")
+            )
         elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
+            self.addQGISPushButton.setToolTip(
+                self.tr("Download and load the layers to QGIS")
+            )
         else:
             self.addQGISPushButton.setVisible(False)
 
