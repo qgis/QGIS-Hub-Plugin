@@ -182,7 +182,7 @@
          <item>
           <widget class="QStackedWidget" name="viewStackedWidget">
            <property name="currentIndex">
-            <number>1</number>
+            <number>0</number>
            </property>
            <widget class="QWidget" name="gridViewPage">
             <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -253,7 +253,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Reload Resources</string>
+               <string>Update Resources</string>
               </property>
              </widget>
             </item>
@@ -539,7 +539,7 @@
            </property>
           </widget>
          </item>
-         <item row="11" column="0" colspan="2">
+         <item row="9" column="0" colspan="2">
           <widget class="QPushButton" name="pushButtonDownload">
            <property name="text">
             <string>Download</string>

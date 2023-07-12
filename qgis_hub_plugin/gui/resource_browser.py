@@ -8,7 +8,15 @@ from pathlib import Path
 from qgis.core import Qgis, QgsApplication, QgsProject, QgsStyle, QgsVectorLayer
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import QItemSelectionModel, QRegExp, QSize, Qt, QUrl, pyqtSlot
+from qgis.PyQt.QtCore import (
+    QByteArray,
+    QItemSelectionModel,
+    QRegExp,
+    QSize,
+    Qt,
+    QUrl,
+    pyqtSlot,
+)
 from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -29,13 +37,8 @@ from qgis_hub_plugin.gui.constants import (
     ResoureType,
 )
 from qgis_hub_plugin.gui.resource_item import AttributeSortingItem, ResourceItem
-from qgis_hub_plugin.toolbelt import PlgLogger
-from qgis_hub_plugin.utilities.common import (
-    download_file,
-    download_resource_thumbnail,
-    read_settings,
-    store_settings,
-)
+from qgis_hub_plugin.toolbelt import PlgLogger, PlgOptionsManager
+from qgis_hub_plugin.utilities.common import download_file, download_resource_thumbnail
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
@@ -50,6 +53,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.parent = parent
         self.iface = iface
         self.log = PlgLogger().log
+        self.plg_settings = PlgOptionsManager()
 
         # Buttons
         self.listViewToolButton.setIcon(
@@ -69,16 +73,43 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Resources
         self.resources = []
+        self.selected_resource = None
         self.checkbox_states = {}
         self.update_checkbox_states()
-        self.resource_model = QStandardItemModel()
 
+        self.resource_model = QStandardItemModel()
         self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
 
         self.listViewResources.setModel(self.proxy_model)
         self.treeViewResources.setModel(self.proxy_model)
         self.treeViewResources.setSortingEnabled(True)
+
+        # Load resource for the first time
+        self.populate_resources()
+
+        # Tooltip
+        self.buttonBox.button(QDialogButtonBox.Help).setToolTip(
+            self.tr("Open the help page")
+        )
+        self.listViewToolButton.setToolTip(self.tr("List view"))
+        self.iconViewToolButton.setToolTip(self.tr("Icon view"))
+        self.iconSizeSlider.setToolTip(self.tr("Thumbnail size"))
+        self.checkBoxOpenDirectory.setToolTip(
+            self.tr("Enable this to open the download directory after download")
+        )
+        self.reloadPushButton.setToolTip(
+            self.tr("Update resources from the QGIS Hub website")
+        )
+        self.lineEditSearch.setToolTip(
+            self.tr("Search resource by the name or the creator")
+        )
+        self.pushButtonDownload.setToolTip(
+            self.tr("Download selected resource to your local disk")
+        )
+
+        # Signal handler
+        self.lineEditSearch.textChanged.connect(self.on_filter_text_changed)
 
         self.listViewResources.selectionModel().selectionChanged.connect(
             self.on_resource_selection_changed
@@ -87,43 +118,33 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.on_resource_selection_changed
         )
 
-        # Load resource for the first time
-        self.populate_resources()
-
-        self.lineEditSearch.textChanged.connect(self.on_filter_text_changed)
-
         self.pushButtonDownload.clicked.connect(self.download_resource)
-
         self.addQGISPushButton.clicked.connect(self.add_resource_to_qgis)
+        self.listViewToolButton.toggled.connect(self.show_list_view)
+        self.iconViewToolButton.toggled.connect(self.show_icon_view)
+        self.buttonBox.button(QDialogButtonBox.Help).clicked.connect(
+            partial(QDesktopServices.openUrl, QUrl(__uri_homepage__))
+        )
+        self.reloadPushButton.clicked.connect(
+            lambda: self.populate_resources(force_update=True)
+        )
+        self.buttonBox.rejected.connect(self.store_setting)
 
         self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
         self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
-
-        self.listViewToolButton.toggled.connect(self.show_list_view)
-        self.iconViewToolButton.toggled.connect(self.show_icon_view)
-
-        self.buttonBox.button(QDialogButtonBox.Help).clicked.connect(
-            partial(QDesktopServices.openUrl, QUrl(__uri_homepage__))
-        )
 
         # Match with the size of the thumbnail
         self.iconSizeSlider.setMinimum(20)
         self.iconSizeSlider.setMaximum(128)
         self.iconSizeSlider.valueChanged.connect(self.update_icon_size)
 
-        self.reloadPushButton.clicked.connect(
-            lambda: self.populate_resources(force_update=True)
-        )
-
-        middle_value = int(
-            self.iconSizeSlider.minimum()
-            + (self.iconSizeSlider.maximum() - self.iconSizeSlider.minimum()) / 2
-        )
-        # TODO: store the last value
-        self.iconSizeSlider.setValue(middle_value)
-        self.show_icon_view()
+        self.restore_setting()
         self.hide_preview()
+
+    def closeEvent(self, event):
+        self.store_setting()
+        super().closeEvent(event)
 
     def show_success_message(self, text):
         return self.message_bar.pushMessage(self.tr("Success"), text, Qgis.Success, 5)
@@ -133,6 +154,54 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def show_warning_message(self, text):
         return self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
+
+    def store_setting(self):
+        # Download directory check box
+        self.plg_settings.set_value_from_key(
+            "download_checkbox", self.checkBoxOpenDirectory.isChecked()
+        )
+
+        # Value in iconSizeSlider
+        self.plg_settings.set_value_from_key("icon_size", self.iconSizeSlider.value())
+
+        # List or grid view
+        self.plg_settings.set_value_from_key(
+            "current_view_index", self.viewStackedWidget.currentIndex()
+        )
+
+        # Geometry
+        self.plg_settings.set_value_from_key("dialog_geometry", self.saveGeometry())
+
+    def restore_setting(self):
+        # Download directory check box
+        self.checkBoxOpenDirectory.setChecked(
+            self.plg_settings.get_value_from_key("download_checkbox", True, bool)
+        )
+
+        # Value in iconSizeSlider
+        middle_value = int(
+            self.iconSizeSlider.minimum()
+            + (self.iconSizeSlider.maximum() - self.iconSizeSlider.minimum()) / 2
+        )
+        self.iconSizeSlider.setValue(
+            self.plg_settings.get_value_from_key("icon_size", middle_value, int)
+        )
+
+        # List or grid view
+        current_view_index = self.plg_settings.get_value_from_key(
+            "current_view_index", 0, int
+        )
+        self.viewStackedWidget.setCurrentIndex(current_view_index)
+        # May be there is a better way to do this
+        self.iconViewToolButton.setChecked(current_view_index == 0)
+        self.listViewToolButton.setChecked(current_view_index == 1)
+
+        # Geometry
+        geometry = self.plg_settings.get_value_from_key(
+            "dialog_geometry", None, QByteArray
+        )
+        if geometry is not None:
+            self.restoreGeometry(geometry)
 
     @show_busy_cursor
     def populate_resources(self, force_update=False):
@@ -160,7 +229,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.resource_model.appendRow([item, author, download_count, upload_date])
 
         if force_update:
-            self.show_success_message("Successfully populated the resources")
+            self.show_success_message("Successfully update the resources")
 
         self.resize_columns()
         self.update_title_bar()
@@ -201,13 +270,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
-        if self.selected_resource():
+        self.update_selected_resource()
+        if self.selected_resource:
             self.update_preview()
             self.update_custom_button()
         else:
             self.log("No resource selected")
 
-    def selected_resource(self):
+    def update_selected_resource(self):
         selected_indexes = []
         if self.viewStackedWidget.currentIndex() == 0:
             selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
@@ -217,23 +287,31 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if len(selected_indexes) > 0:
             proxy_index = selected_indexes[0]
             source_index = self.proxy_model.mapToSource(proxy_index)
-            return self.resource_model.itemFromIndex(source_index)
+            self.selected_resource = self.resource_model.itemFromIndex(source_index)
         else:
-            return None
+            # Keep the previous selected in the attribute
+            pass
 
     def update_custom_button(self):
         self.addQGISPushButton.setVisible(True)
-        if self.selected_resource().resource_type == ResoureType.Model:
+        if self.selected_resource.resource_type == ResoureType.Model:
             self.addQGISPushButton.setText(self.tr("Add Model to QGIS"))
-        elif self.selected_resource().resource_type == ResoureType.Style:
+            self.addQGISPushButton.setToolTip(self.tr("Add the model to QGIS directly"))
+        elif self.selected_resource.resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
-        elif self.selected_resource().resource_type == ResoureType.Geopackage:
+            self.addQGISPushButton.setToolTip(
+                self.tr("Add the style to QGIS style database")
+            )
+        elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
+            self.addQGISPushButton.setToolTip(
+                self.tr("Download and load the layers to QGIS")
+            )
         else:
             self.addQGISPushButton.setVisible(False)
 
     def update_preview(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         if resource is None:
             self.hide_preview()
             return
@@ -269,17 +347,17 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.groupBoxPreview.show()
 
     def download_resource(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         file_extension = os.path.splitext(resource.file)[1]
 
-        # Set the default download location
-        default_download_location = "~/Downloads"
-
         # Read the stored download location
-        download_location = read_settings("downloadLocation", default_download_location)
+        download_location = self.plg_settings.get_value_from_key(
+            "download_location", exp_type=str
+        )
 
         default_path = os.path.join(download_location, os.path.basename(resource.file))
 
+        # Set filter based on the extension
         file_path = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Resource"),
@@ -303,19 +381,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                         QUrl.fromLocalFile(str(Path(file_path).parent))
                     )
 
-                store_settings("downloadLocation", str(Path(file_path).parent))
+                self.plg_settings.set_value_from_key(
+                    "download_location", str(Path(file_path).parent)
+                )
 
     def add_resource_to_qgis(self):
-        if self.selected_resource().resource_type == ResoureType.Model:
+        if self.selected_resource.resource_type == ResoureType.Model:
             self.add_model_to_qgis()
-        elif self.selected_resource().resource_type == ResoureType.Style:
+        elif self.selected_resource.resource_type == ResoureType.Style:
             self.add_style_to_qgis()
-        elif self.selected_resource().resource_type == ResoureType.Geopackage:
+        elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.add_geopackage_to_qgis()
 
     @show_busy_cursor
     def add_model_to_qgis(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         qgis_user_dir = QgsApplication.qgisSettingsDirPath()
 
         # Automatically download to qgis_hub subdirectory
@@ -343,7 +423,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @show_busy_cursor
     def add_geopackage_to_qgis(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         file_extension = os.path.splitext(resource.file)[1]
         file_filter = self.tr("All files (*)")
         if file_extension == ".gpkg":
@@ -441,7 +521,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @show_busy_cursor
     def add_style_to_qgis(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         tempdir = Path(
             "/tmp" if platform.system() == "Darwin" else tempfile.gettempdir()
         )

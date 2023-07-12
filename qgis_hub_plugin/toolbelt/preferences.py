@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass, fields
 
 # PyQGIS
 from qgis.core import QgsSettings
+from qgis.PyQt.QtCore import QByteArray
 
 # package
 import qgis_hub_plugin.toolbelt.log_handler as log_hdlr
@@ -26,6 +27,15 @@ class PlgSettingsStructure:
     # global
     debug_mode: bool = False
     version: str = __version__
+
+    # State
+    download_location: str = "~/Downloads"
+
+    # UI
+    icon_size: int = 64
+    download_checkbox: bool = False
+    current_view_index: int = 0
+    dialog_geometry: QByteArray = None
 
 
 class PlgOptionsManager:
