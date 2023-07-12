@@ -73,6 +73,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Resources
         self.resources = []
+        self.selected_resource = None
         self.checkbox_states = {}
         self.update_checkbox_states()
         self.resource_model = QStandardItemModel()
@@ -251,13 +252,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @pyqtSlot("QItemSelection", "QItemSelection")
     def on_resource_selection_changed(self, selected, deselected):
-        if self.selected_resource():
+        self.update_selected_resource()
+        if self.selected_resource:
             self.update_preview()
             self.update_custom_button()
         else:
             self.log("No resource selected")
 
-    def selected_resource(self):
+    def update_selected_resource(self):
         selected_indexes = []
         if self.viewStackedWidget.currentIndex() == 0:
             selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
@@ -267,23 +269,24 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if len(selected_indexes) > 0:
             proxy_index = selected_indexes[0]
             source_index = self.proxy_model.mapToSource(proxy_index)
-            return self.resource_model.itemFromIndex(source_index)
+            self.selected_resource = self.resource_model.itemFromIndex(source_index)
         else:
-            return None
+            # Keep the previous selected in the attribute
+            pass
 
     def update_custom_button(self):
         self.addQGISPushButton.setVisible(True)
-        if self.selected_resource().resource_type == ResoureType.Model:
+        if self.selected_resource.resource_type == ResoureType.Model:
             self.addQGISPushButton.setText(self.tr("Add Model to QGIS"))
-        elif self.selected_resource().resource_type == ResoureType.Style:
+        elif self.selected_resource.resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
-        elif self.selected_resource().resource_type == ResoureType.Geopackage:
+        elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
         else:
             self.addQGISPushButton.setVisible(False)
 
     def update_preview(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         if resource is None:
             self.hide_preview()
             return
@@ -319,7 +322,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.groupBoxPreview.show()
 
     def download_resource(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         file_extension = os.path.splitext(resource.file)[1]
 
         # Read the stored download location
@@ -358,16 +361,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 )
 
     def add_resource_to_qgis(self):
-        if self.selected_resource().resource_type == ResoureType.Model:
+        if self.selected_resource.resource_type == ResoureType.Model:
             self.add_model_to_qgis()
-        elif self.selected_resource().resource_type == ResoureType.Style:
+        elif self.selected_resource.resource_type == ResoureType.Style:
             self.add_style_to_qgis()
-        elif self.selected_resource().resource_type == ResoureType.Geopackage:
+        elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.add_geopackage_to_qgis()
 
     @show_busy_cursor
     def add_model_to_qgis(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         qgis_user_dir = QgsApplication.qgisSettingsDirPath()
 
         # Automatically download to qgis_hub subdirectory
@@ -395,7 +398,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @show_busy_cursor
     def add_geopackage_to_qgis(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         file_extension = os.path.splitext(resource.file)[1]
         file_filter = self.tr("All files (*)")
         if file_extension == ".gpkg":
@@ -493,7 +496,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @show_busy_cursor
     def add_style_to_qgis(self):
-        resource = self.selected_resource()
+        resource = self.selected_resource
         tempdir = Path(
             "/tmp" if platform.system() == "Darwin" else tempfile.gettempdir()
         )
