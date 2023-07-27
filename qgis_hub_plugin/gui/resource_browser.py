@@ -327,6 +327,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
             self.graphicsViewPreview.scene().clear()
             self.graphicsViewPreview.scene().addItem(item)
+            # Center-align the image
+            center = self.graphicsViewPreview.rect().center()
+            item.setPos(center - item.boundingRect().center())
+
             self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
         else:
             thumbnail_path = download_resource_thumbnail(
