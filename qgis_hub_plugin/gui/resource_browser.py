@@ -328,6 +328,17 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.graphicsViewPreview.scene().clear()
             self.graphicsViewPreview.scene().addItem(item)
             self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
+        else:
+            thumbnail_path = download_resource_thumbnail(
+                resource.thumbnail, resource.uuid, "thumbnails"
+            )
+            pixmap = QPixmap(str(thumbnail_path.absolute()))
+            if not pixmap.isNull():
+                item = QGraphicsPixmapItem(pixmap)
+
+                self.graphicsViewPreview.scene().clear()
+                self.graphicsViewPreview.scene().addItem(item)
+                self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
 
         # Description
         self.labelName.setText(resource.name)
