@@ -318,7 +318,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.show_preview()
 
         # Thumbnail
-        thumbnail_path = download_resource_thumbnail(resource.thumbnail, resource.uuid)
+        thumbnail_path = download_resource_thumbnail(
+            resource.thumbnail_full, resource.uuid, "thumbnails_full"
+        )
         pixmap = QPixmap(str(thumbnail_path.absolute()))
         if not pixmap.isNull():
             item = QGraphicsPixmapItem(pixmap)

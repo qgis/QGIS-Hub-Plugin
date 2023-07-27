@@ -25,7 +25,7 @@ def download_file(url: str, file_path: Path, force: bool = False):
     return file_path.exists()
 
 
-def download_resource_thumbnail(url: str, uuid: str):
+def download_resource_thumbnail(url: str, uuid: str, folder: str):
     qgis_user_dir = QgsApplication.qgisSettingsDirPath()
     # Assume it as jpg
     extension = ".jpg"
@@ -34,7 +34,7 @@ def download_resource_thumbnail(url: str, uuid: str):
     except IndexError():
         pass
 
-    thumbnail_dir = Path(qgis_user_dir, "qgis_hub", "thumbnails")
+    thumbnail_dir = Path(qgis_user_dir, "qgis_hub", folder)
     thumbnail_path = Path(thumbnail_dir, f"{uuid}.{extension}")
     if not thumbnail_dir.exists():
         thumbnail_dir.mkdir(parents=True, exist_ok=True)
