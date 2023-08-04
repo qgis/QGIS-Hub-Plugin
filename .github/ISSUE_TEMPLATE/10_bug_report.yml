@@ -22,7 +22,6 @@ body:
       label: Steps to reproduce the issue
       description: |
         Kindly provide the step-by-step instructions to reproduce the issue.
-        You can also include sample datasets and the QGIS project file to help us understand and replicate the behavior.
         Feel free to add screencasts or screenshots; simply drag and drop them into the text box.
 
         1. Go to '...'
@@ -33,12 +32,12 @@ body:
       required: true
 
   - type: textarea
-    id: about-info
+    id: versions
     attributes:
-      label: QGIS Versions
+      label: QGIS and Plugin Versions
       description: |
-        In QGIS, go to the Help menu -> About, click in the table, press Ctrl+A, then Ctrl+C, and finally, paste the information here.
-        Avoid using screenshots for this purpose.
+        For QGIS version: go to the Help menu -> About
+        For Plugin version: go to Plugins menu -> QGIS Hub Plugin -> Setting
     validations:
       required: true
 
