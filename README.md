@@ -2,38 +2,13 @@
 
 A QGIS plugins to fetch resources from the QGIS Hub
 
+[Resource Browser](./docs/images/resource_browser.png)
+
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 [![flake8](https://img.shields.io/badge/linter-flake8-green)](https://flake8.pycqa.org/)
-
-## Generated options
-
-### Plugin
-
-| Cookiecutter option              |                     Picked value                      |
-| :------------------------------- | :---------------------------------------------------: |
-| Plugin name                      |                    QGIS Hub Plugin                    |
-| Plugin name slugified            |                    qgis_hub_plugin                    |
-| Plugin name class (used in code) |                     QgisHubPlugin                     |
-| Plugin category                  |                          Web                          |
-| Plugin description short         |  A QGIS plugins to fetch resources from the QGIS Hub  |
-| Plugin description long          |  A QGIS plugins to fetch resources from the QGIS Hub  |
-| Plugin tags                      | style, model, layer, resource, 3d model, project, hub |
-| Plugin icon                      |                   default_icon.png                    |
-| Plugin with processing provider  |                          no                           |
-| Author name                      |                     Ismail Sunni                      |
-| Author organization              |                      Camptocamp                       |
-| Author email                     |                <imajimatika@gmail.com>                |
-| Minimum QGIS version             |                         3.28                          |
-| Maximum QGIS version             |                         3.99                          |
-| Git repository URL               |       <https://github.com/qgis/QGIS-Hub-Plugin>       |
-| Git default branch               |                         main                          |
-| License                          |                         GPLv3                         |
-| Python linter                    |                        Flake8                         |
-| CI/CD platform                   |                        GitHub                         |
-| IDE                              |                        VSCode                         |
 
 ### Tooling
 
