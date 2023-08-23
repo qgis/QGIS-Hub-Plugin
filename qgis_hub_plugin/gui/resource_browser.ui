@@ -27,7 +27,7 @@
    <item row="0" column="0">
     <layout class="QVBoxLayout" name="vlayout">
      <property name="spacing">
-      <number>6</number>
+      <number>3</number>
      </property>
     </layout>
    </item>
@@ -448,7 +448,10 @@
      <property name="layoutDirection">
       <enum>Qt::LeftToRight</enum>
      </property>
-     <layout class="QGridLayout" name="gridLayout_2">
+     <layout class="QFormLayout" name="formLayout">
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item row="0" column="0">
        <widget class="QLabel" name="labelSearch">
         <property name="text">
@@ -476,18 +479,22 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <layout class="QVBoxLayout" name="verticalLayout">
-        <item>
-         <widget class="QWidget" name="widget_2" native="true">
+       <widget class="QWidget" name="widget_2" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <property name="leftMargin">
+          <number>9</number>
+         </property>
+         <property name="topMargin">
+          <number>9</number>
+         </property>
+         <property name="rightMargin">
+          <number>9</number>
+         </property>
+         <property name="bottomMargin">
+          <number>9</number>
+         </property>
+         <item>
           <widget class="QCheckBox" name="checkBoxStyle">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>-8</y>
-             <width>58</width>
-             <height>31</height>
-            </rect>
-           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -501,15 +508,9 @@
             <bool>true</bool>
            </property>
           </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="checkBoxGeopackage">
-           <property name="geometry">
-            <rect>
-             <x>90</x>
-             <y>-8</y>
-             <width>106</width>
-             <height>31</height>
-            </rect>
-           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -526,15 +527,9 @@
             <bool>false</bool>
            </property>
           </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="checkBoxModel">
-           <property name="geometry">
-            <rect>
-             <x>210</x>
-             <y>-8</y>
-             <width>90</width>
-             <height>31</height>
-            </rect>
-           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -548,9 +543,22 @@
             <bool>true</bool>
            </property>
           </widget>
-         </widget>
-        </item>
-       </layout>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </widget>
       </item>
      </layout>
     </widget>
