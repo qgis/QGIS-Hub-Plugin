@@ -22,10 +22,14 @@
 
 Features:
 
-1. Search by name and creator
+1. Search by resource's name or creator
 2. Filter by resource type
-3. Resource shown as grid or list
-4. Reload resources from the QGIS Hub plugin to update the local content
+3. Resource shown as grid or list:
+
+   - On the grid view, the thumbnail can be resized
+   - On the list view, the list can be sorted by resource's name, creator's name, download count, or uploaded date
+
+4. Get the latest update of the resources from the QGIS Hub plugin
 5. Resize the thumbnail (only works on grid view)
 6. Button to toggle between grid or list view
 7. Preview of the currently selected resource
