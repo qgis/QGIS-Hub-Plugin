@@ -16,6 +16,11 @@ Unreleased
 
 -->
 
+## 0.1.1 - 2023-08-23
+
+- Fix UI issue on HiDPI screen
+- Release as non experimental
+
 ## 0.1.0 - 2023-04-20
 
 - First release
