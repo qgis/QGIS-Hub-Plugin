@@ -43,6 +43,10 @@ Features:
 10. Download the resource on your disk (without adding to QGIS)
 11. Open this help page
 
+## Acknowledgement
+
+The initial idea of the plugin is coming from [Tim Sutton](https://github.com/timlinux), on [QGIS Contributor Meeting 2023 's-Hertogenbosch](https://github.com/qgis/QGIS/wiki/25th-Contributor-Meeting-in-'s-Hertogenbosch). The plugin has been developed by [Ismail Sunni](https://github.com/ismailsunni) and [Ronit Jadhav](https://github.com/ronitjadhav) as part of the [Camptocamp](https://www.camptocamp.com/en) open source contribution.
+
 ---
 
 ```{toctree}
