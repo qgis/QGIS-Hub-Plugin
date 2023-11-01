@@ -16,6 +16,10 @@ Unreleased
 
 -->
 
+## 0.1.2 - 2023-11-01
+
+- Fix bug #85: failed to handle null thumbnail
+
 ## 0.1.1 - 2023-08-23
 
 - Fix UI issue on HiDPI screen
