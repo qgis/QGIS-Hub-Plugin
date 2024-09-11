@@ -5,7 +5,14 @@ import zipfile
 from functools import partial
 from pathlib import Path
 
-from qgis.core import Qgis, QgsApplication, QgsProject, QgsStyle, QgsVectorLayer
+from qgis.core import (
+    Qgis,
+    QgsApplication,
+    QgsLayerDefinition,
+    QgsProject,
+    QgsStyle,
+    QgsVectorLayer,
+)
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import (
@@ -38,7 +45,11 @@ from qgis_hub_plugin.gui.constants import (
 )
 from qgis_hub_plugin.gui.resource_item import AttributeSortingItem, ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger, PlgOptionsManager
-from qgis_hub_plugin.utilities.common import download_file, download_resource_thumbnail
+from qgis_hub_plugin.utilities.common import (
+    QGIS_HUB_DIR,
+    download_file,
+    download_resource_thumbnail,
+)
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
@@ -249,7 +260,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             ResoureType.Style: style_checked,
             ResoureType.Model: model_checked,
             ResoureType.Model3D: model3d_checked,
-            ResoureType.QGISLayer: layer_definition_checked,
+            ResoureType.LayerDefinition: layer_definition_checked,
         }
 
     def update_resource_filter(self):
@@ -313,6 +324,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
             self.addQGISPushButton.setToolTip(
                 self.tr("Download and load the layers to QGIS")
+            )
+        elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
+            self.addQGISPushButton.setText(self.tr("Add Layer to QGIS"))
+            self.addQGISPushButton.setToolTip(
+                self.tr("Load the layer definition to QGIS")
             )
         else:
             self.addQGISPushButton.setVisible(False)
@@ -399,6 +415,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.add_style_to_qgis()
         elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.add_geopackage_to_qgis()
+        elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
+            self.add_layer_definition_to_qgis()
 
     @show_busy_cursor
     def add_model_to_qgis(self):
@@ -545,6 +563,37 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         else:
             self.show_error_message(
                 self.tr(f"Style {resource.name} is not added to QGIS")
+            )
+
+    @show_busy_cursor
+    def add_layer_definition_to_qgis(self):
+        resource = self.selected_resource
+
+        layer_definition_dir = QGIS_HUB_DIR / "layer_definitions"
+        file_path = layer_definition_dir / f"{resource.name}.qlr"
+
+        if not layer_definition_dir.exists():
+            layer_definition_dir.mkdir(parents=True, exist_ok=True)
+
+        if not download_resource_file(resource.file, file_path):
+            self.show_error_message(self.tr(f"Download failed for {resource.name}"))
+            return
+
+        current_project = QgsProject.instance()
+
+        self.load_layer_definition(current_project, resource.name, file_path)
+
+    def load_layer_definition(self, project, layer_name, layer_definition_file_path):
+        success, message = QgsLayerDefinition.loadLayerDefinition(
+            str(layer_definition_file_path), project, project.layerTreeRoot()
+        )
+        if success:
+            self.show_success_message(
+                self.tr(f"Successfully load layer definition: {layer_name}")
+            )
+        else:
+            self.show_error_message(
+                self.tr(f"Failed to load layer definition: {layer_name}: {message}")
             )
 
     def update_title_bar(self):

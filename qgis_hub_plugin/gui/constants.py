@@ -13,4 +13,4 @@ class ResoureType:
     Style = "Style"
     Geopackage = "Geopackage"
     Model3D = "3DModel"
-    QGISLayer = "LayerDefinition"
+    LayerDefinition = "LayerDefinition"

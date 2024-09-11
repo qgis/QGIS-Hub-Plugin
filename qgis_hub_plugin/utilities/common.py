@@ -8,6 +8,8 @@ from qgis_hub_plugin.__about__ import DIR_PLUGIN_ROOT
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.file_downloader import FileDownloader
 
+QGIS_HUB_DIR = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
+
 
 def get_icon(icon_name: str) -> QIcon:
     full_path = get_icon_path(icon_name)
@@ -36,7 +38,6 @@ def download_resource_thumbnail(url: str, uuid: str) -> Path:
         PlgLogger.log(f"UUID: {uuid} has URL == None: {url}")
         return Path(get_icon_path("QGIS_Hub_icon.svg"))
 
-    qgis_user_dir = QgsApplication.qgisSettingsDirPath()
     # Assume it as jpg
     extension = ".jpg"
     try:
@@ -44,7 +45,7 @@ def download_resource_thumbnail(url: str, uuid: str) -> Path:
     except IndexError as e:
         PlgLogger.log(f"UUID: {uuid} on URL: {url} get index error: {e}")
 
-    thumbnail_dir = Path(qgis_user_dir, "qgis_hub", "thumbnails")
+    thumbnail_dir = Path(QGIS_HUB_DIR, "thumbnails")
     thumbnail_path = Path(thumbnail_dir, f"{uuid}.{extension}")
     if not thumbnail_dir.exists():
         thumbnail_dir.mkdir(parents=True, exist_ok=True)
