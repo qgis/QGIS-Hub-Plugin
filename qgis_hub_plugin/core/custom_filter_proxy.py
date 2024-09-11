@@ -1,4 +1,4 @@
-from qgis.PyQt.QtCore import QSortFilterProxyModel, Qt
+from qgis.PyQt.QtCore import QSortFilterProxyModel
 
 from qgis_hub_plugin.gui.constants import ResourceTypeRole, SortingRole
 from qgis_hub_plugin.toolbelt import PlgLogger

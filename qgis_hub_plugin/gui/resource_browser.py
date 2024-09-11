@@ -130,9 +130,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         )
         self.buttonBox.rejected.connect(self.store_setting)
 
+        # TODO(IS): Make it dynamic
         self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
         self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
         self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
+        self.checkBoxModel3D.stateChanged.connect(self.update_resource_filter)
+        self.checkBoxLayerDefinition.stateChanged.connect(self.update_resource_filter)
 
         # Match with the size of the thumbnail
         self.iconSizeSlider.setMinimum(20)
@@ -238,11 +241,15 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         geopackage_checked = self.checkBoxGeopackage.isChecked()
         style_checked = self.checkBoxStyle.isChecked()
         model_checked = self.checkBoxModel.isChecked()
+        model3d_checked = self.checkBoxModel3D.isChecked()
+        layer_definition_checked = self.checkBoxLayerDefinition.isChecked()
 
         self.checkbox_states = {
             ResoureType.Geopackage: geopackage_checked,
             ResoureType.Style: style_checked,
             ResoureType.Model: model_checked,
+            ResoureType.Model3D: model3d_checked,
+            ResoureType.QGISLayer: layer_definition_checked,
         }
 
     def update_resource_filter(self):

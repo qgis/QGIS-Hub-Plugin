@@ -7,7 +7,10 @@ CreatorRole = Qt.UserRole + 3
 SortingRole = Qt.UserRole + 4
 
 
+# Type of resources, based on the QGIS Hub API
 class ResoureType:
     Model = "Model"
     Style = "Style"
     Geopackage = "Geopackage"
+    Model3D = "3DModel"
+    QGISLayer = "LayerDefinition"
