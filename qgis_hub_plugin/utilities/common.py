@@ -37,6 +37,10 @@ def download_resource_thumbnail(url: str, uuid: str) -> Path:
     if not url:
         PlgLogger.log(f"UUID: {uuid} has URL == None: {url}")
         return Path(get_icon_path("QGIS_Hub_icon.svg"))
+    # If the URL is the default QGIS Hub icon, return the default icon.
+    # Because it is not a thumbnail and it is too small
+    if url.endswith("qgis-icon-32x32.png"):
+        return Path(get_icon_path("QGIS_Hub_icon.svg"))
 
     # Assume it as jpg
     extension = ".jpg"
