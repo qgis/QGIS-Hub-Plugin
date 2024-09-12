@@ -16,6 +16,13 @@ Unreleased
 
 -->
 
+## 0.2.0 - 2024-09-13
+
+- Limit the name to be maximum 50 character
+- Add filtering for 3D model and QGIS Layer Definition
+- Add "add to QGIS" for layer definition
+- Fix bug when resource give 404
+
 ## 0.1.2 - 2023-11-01
 
 - Fix bug #85: failed to handle null thumbnail

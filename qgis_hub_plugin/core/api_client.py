@@ -19,7 +19,7 @@ def get_all_resources(force_update=False):
             return json.load(f)
 
     # TODO: download in the background
-    # hardcoded to get all resource, currently only ~160
+    # hardcoded to get all resource, currently only ~227
     url = f"{BASE_URL}?limit=1000&format=json"
     status = download_file(url=url, destination=response_file, force=force_update)
     if status and response_file.exists():

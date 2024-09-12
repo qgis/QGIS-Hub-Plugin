@@ -23,11 +23,6 @@ def get_icon_path(icon_name: str) -> str:
     return os.path.join(DIR_PLUGIN_ROOT, "resources", "images", icon_name)
 
 
-# def download_file(url: str, file_path: Path, force: bool = False):
-#     if not force and file_path.exists():
-#         return
-
-
 def download_file(
     url: str, destination: Path, force: bool = True, timeout: int = 30000
 ) -> Optional[str]:
@@ -37,6 +32,8 @@ def download_file(
     Args:
         url (str): The URL of the file to download.
         destination (Path): The local path where the file should be saved.
+        force (bool): If true, the file will be downloaded even if it already exists.
+            Defaults to True.
         timeout (int): The timeout for the request in milliseconds. Defaults to 30000 (30 seconds).
 
     Returns:
