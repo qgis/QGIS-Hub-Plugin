@@ -9,6 +9,7 @@ BASE_URL = "https://plugins.qgis.org/api/v1/resources/"
 
 
 def get_all_resources(force_update=False):
+    print("get_all_resources", force_update)
     # Check if the response file exits
     response_folder = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
     response_folder.mkdir(parents=True, exist_ok=True)
@@ -20,8 +21,8 @@ def get_all_resources(force_update=False):
     # TODO: download in the background
     # hardcoded to get all resource, currently only ~160
     url = f"{BASE_URL}?limit=1000&format=json"
-
-    if download_file(url=url, file_path=response_file, force=force_update):
+    status = download_file(url=url, destination=response_file, force=force_update)
+    if status and response_file.exists():
         with open(response_file) as f:
             return json.load(f)
     else:

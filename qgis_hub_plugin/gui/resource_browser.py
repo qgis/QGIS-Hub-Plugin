@@ -50,6 +50,7 @@ from qgis_hub_plugin.utilities.common import (
     download_file,
     download_resource_thumbnail,
 )
+from qgis_hub_plugin.utilities.exception import DownloadError
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
@@ -219,6 +220,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @show_busy_cursor
     def populate_resources(self, force_update=False):
+        self.log(f"Populating resources {force_update}")
         if force_update or not self.resources:
             response = get_all_resources(force_update=force_update)
 
@@ -394,11 +396,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if not file_path.endswith(file_extension):
                 file_path = file_path + file_extension
 
-            if not download_resource_file(resource.file, file_path):
-                self.show_warning_message(f"Download failed for {resource.name}")
-            else:
+            try:
+                download_file(resource.file, Path(file_path))
                 self.show_success_message(f"Downloaded {resource.name} to {file_path}")
-
                 if self.checkBoxOpenDirectory.isChecked():
                     QDesktopServices.openUrl(
                         QUrl.fromLocalFile(str(Path(file_path).parent))
@@ -407,16 +407,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 self.plg_settings.set_value_from_key(
                     "download_location", str(Path(file_path).parent)
                 )
+            except DownloadError as e:
+                self.show_error_message(str(e))
 
     def add_resource_to_qgis(self):
-        if self.selected_resource.resource_type == ResoureType.Model:
-            self.add_model_to_qgis()
-        elif self.selected_resource.resource_type == ResoureType.Style:
-            self.add_style_to_qgis()
-        elif self.selected_resource.resource_type == ResoureType.Geopackage:
-            self.add_geopackage_to_qgis()
-        elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
-            self.add_layer_definition_to_qgis()
+        try:
+            if self.selected_resource.resource_type == ResoureType.Model:
+                self.add_model_to_qgis()
+            elif self.selected_resource.resource_type == ResoureType.Style:
+                self.add_style_to_qgis()
+            elif self.selected_resource.resource_type == ResoureType.Geopackage:
+                self.add_geopackage_to_qgis()
+            elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
+                self.add_layer_definition_to_qgis()
+        except DownloadError as e:
+            self.show_error_message(str(e))
 
     @show_busy_cursor
     def add_model_to_qgis(self):
@@ -428,23 +433,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if not custom_model_directory.exists():
             custom_model_directory.mkdir(parents=True, exist_ok=True)
 
-        file_path = os.path.join(
-            custom_model_directory, os.path.basename(resource.file)
-        )
+        file_path = custom_model_directory / os.path.basename(resource.file)
 
-        if download_resource_file(resource.file, file_path):
-            # Refreshing the processing toolbox
-            QgsApplication.processingRegistry().providerById(
-                "model"
-            ).refreshAlgorithms()
-            self.show_success_message(
-                self.tr(f"Model {resource.name} is added to QGIS")
-            )
-
-        else:
-            self.show_warning_message(
-                self.tr(f"Download failed for model {resource.name}")
-            )
+        download_file(resource.file, file_path)
+        # Refreshing the processing toolbox
+        QgsApplication.processingRegistry().providerById("model").refreshAlgorithms()
+        self.show_success_message(self.tr(f"Model {resource.name} is added to QGIS"))
 
     @show_busy_cursor
     def add_geopackage_to_qgis(self):
@@ -467,9 +461,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if not file_path.endswith(file_extension):
                 file_path = file_path + file_extension
 
-            if not download_resource_file(resource.file, file_path):
-                self.show_error_message(self.tr(f"Download failed for {resource.name}"))
-                return
+            download_file(resource.file, file_path)
 
         extract_location = Path(os.path.dirname(file_path))
         current_project = QgsProject.instance()
@@ -551,7 +543,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             "/tmp" if platform.system() == "Darwin" else tempfile.gettempdir()
         )
         tempfile_path = Path(tempdir, resource.file.split("/")[-1])
-        download_resource_file(resource.file, tempfile_path, True)
+        download_file(resource.file, tempfile_path, True)
 
         # Add to QGIS style library
         style = QgsStyle().defaultStyle()
@@ -575,9 +567,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if not layer_definition_dir.exists():
             layer_definition_dir.mkdir(parents=True, exist_ok=True)
 
-        if not download_resource_file(resource.file, file_path):
-            self.show_error_message(self.tr(f"Download failed for {resource.name}"))
-            return
+        download_file(resource.file, file_path)
 
         current_project = QgsProject.instance()
 
@@ -635,13 +625,3 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def update_icon_size(self, size):
         self.listViewResources.setIconSize(QSize(size, size))
-
-
-# TODO: do it QGIS task to have
-def download_resource_file(url: str, file_path: str, force: bool = False):
-    resource_path = Path(file_path)
-    download_file(url, resource_path, force)
-    if resource_path.exists():
-        return resource_path
-    else:
-        return None
