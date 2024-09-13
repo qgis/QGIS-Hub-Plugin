@@ -39,6 +39,8 @@ Features:
    - Style will be added to your style manager
    - Model will be added to your profile model directory and shown directly on your QGIS
    - Geopackage will be downloaded on your disk and loaded directly
+   - 3D model has no option to add to QGIS directly (you can still download it and use it from 3D style panel)
+   - Layer Definition will be loaded directly
 
 10. Download the resource on your disk (without adding to QGIS)
 11. Open this help page
