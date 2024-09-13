@@ -26,6 +26,7 @@ from qgis.PyQt.QtCore import (
 )
 from qgis.PyQt.QtGui import QDesktopServices, QPixmap, QStandardItem, QStandardItemModel
 from qgis.PyQt.QtWidgets import (
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -249,6 +250,27 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         self.resize_columns()
         self.update_title_bar()
+        self.init_subtype_checkboxes()
+
+    def init_subtype_checkboxes(self):
+        resource_subtypes = []
+        for resource in self.resources:
+            if resource.get("resource_subtype") not in resource_subtypes:
+                resource_subtypes.append(resource.get("resource_subtype"))
+        resource_subtypes.remove(None)
+        resource_subtypes.sort()
+        resource_subtypes.append(None)
+        self.log(f"Resource subtypes: {resource_subtypes}")
+        for subtype in resource_subtypes:
+            check_box = self.create_subtype_checkbox(subtype)
+            self.hLayoutSubType.addWidget(check_box)
+
+    def create_subtype_checkbox(self, subtype):
+        check_box = QCheckBox(subtype if subtype else self.tr("N/A"))
+        check_box.setProperty("value", subtype)
+        check_box.setChecked(True)
+        check_box.connect(self.update_resource_filter)
+        return check_box
 
     def update_checkbox_states(self):
         geopackage_checked = self.checkBoxGeopackage.isChecked()
