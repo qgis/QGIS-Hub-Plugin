@@ -16,10 +16,10 @@ Unreleased
 
 -->
 
-## 0.2.0 - 2024-09-13
+## 0.2.0 - 2024-11-07
 
 - Limit the name to be maximum 50 character
-- Add filtering for 3D model and QGIS Layer Definition
+- Add support for 3D model and QGIS Layer Definition
 - Add "add to QGIS" for layer definition
 - Fix bug when resource give 404
 
