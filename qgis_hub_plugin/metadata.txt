@@ -5,7 +5,7 @@ category=Web
 hasProcessingProvider=no
 description=A QGIS plugin to fetch resources from the QGIS Hub
 icon=resources/images/QGIS_Hub_icon.svg
-tags=style, model, layer, resource, 3d model, project, hub
+tags=style, processing model, layer, resource, 3d model, project, hub
 
 # credits and contact
 author=Ismail Sunni, Ronit Jadhav
@@ -21,5 +21,5 @@ qgisMinimumVersion=3.28
 qgisMaximumVersion=3.99
 
 # versioning
-version=0.2.0
+version=0.3.0
 changelog=
