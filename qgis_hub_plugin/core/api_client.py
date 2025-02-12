@@ -5,7 +5,7 @@ from qgis.core import QgsApplication
 
 from qgis_hub_plugin.utilities.common import download_file
 
-BASE_URL = "https://plugins.qgis.org/api/v1/resources/"
+BASE_URL = "https://hub.qgis.org/api/v1/resources/"
 
 
 def get_all_resources(force_update=False):
