@@ -16,6 +16,10 @@ Unreleased
 
 -->
 
+## 0.3.0 - 2025-02-12
+
+- Update the new resource hub API URL
+
 ## 0.2.0 - 2024-11-07
 
 - Limit the name to be maximum 50 character
