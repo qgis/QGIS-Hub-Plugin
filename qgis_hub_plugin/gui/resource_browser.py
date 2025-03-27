@@ -32,6 +32,7 @@ from qgis.PyQt.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsScene,
     QSizePolicy,
+    QTreeWidgetItem,
 )
 
 from qgis_hub_plugin.__about__ import __uri_homepage__
@@ -89,9 +90,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.checkbox_states = {}
         self.update_checkbox_states()
 
+        # Setup resource model and proxy model first
         self.resource_model = QStandardItemModel()
         self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
+
+        # Now setup tree widget which depends on proxy_model
+        self.setup_resource_type_tree()
 
         self.listViewResources.setModel(self.proxy_model)
         self.treeViewResources.setModel(self.proxy_model)
@@ -141,13 +146,6 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             lambda: self.populate_resources(force_update=True)
         )
         self.buttonBox.rejected.connect(self.store_setting)
-
-        # TODO(IS): Make it dynamic
-        self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxModel3D.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxLayerDefinition.stateChanged.connect(self.update_resource_filter)
 
         # Match with the size of the thumbnail
         self.iconSizeSlider.setMinimum(20)
@@ -251,18 +249,25 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.update_title_bar()
 
     def update_checkbox_states(self):
-        geopackage_checked = self.checkBoxGeopackage.isChecked()
-        style_checked = self.checkBoxStyle.isChecked()
-        model_checked = self.checkBoxModel.isChecked()
-        model3d_checked = self.checkBoxModel3D.isChecked()
-        layer_definition_checked = self.checkBoxLayerDefinition.isChecked()
-
+        """
+        Create a dictionary with resource types and their filter states.
+        This method is maintained for compatibility but now gets states from the tree selection.
+        """
+        selected_items = self.treeWidgetCategories.selectedItems()
+        selected_types = None
+        
+        if selected_items:
+            selected_types = selected_items[0].data(0, Qt.UserRole)
+            
+        # Default to all types selected if nothing is selected or "all" is selected
+        is_all_selected = not selected_types or selected_types == "all"
+        
         self.checkbox_states = {
-            ResoureType.Geopackage: geopackage_checked,
-            ResoureType.Style: style_checked,
-            ResoureType.Model: model_checked,
-            ResoureType.Model3D: model3d_checked,
-            ResoureType.LayerDefinition: layer_definition_checked,
+            ResoureType.Geopackage: is_all_selected or (selected_types and ResoureType.Geopackage in selected_types),
+            ResoureType.Style: is_all_selected or (selected_types and ResoureType.Style in selected_types),
+            ResoureType.Model: is_all_selected or (selected_types and ResoureType.Model in selected_types),
+            ResoureType.Model3D: is_all_selected or (selected_types and ResoureType.Model3D in selected_types),
+            ResoureType.LayerDefinition: is_all_selected or (selected_types and ResoureType.LayerDefinition in selected_types),
         }
 
     def update_resource_filter(self):
@@ -625,3 +630,56 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def update_icon_size(self, size):
         self.listViewResources.setIconSize(QSize(size, size))
+
+    def setup_resource_type_tree(self):
+        """
+        Setup the resource type tree widget with available resource types.
+        The tree will have a main "Resource Types" item with child items for each resource type.
+        """
+        # Clear the tree widget
+        self.treeWidgetCategories.clear()
+        
+        # Set up the header
+        self.treeWidgetCategories.setHeaderLabel("Resource Types")
+        
+        # Create the root item
+        self.treeWidgetCategories.invisibleRootItem()
+        
+        # Add resource type categories
+        categories = {
+            "Styles": [ResoureType.Style],
+            "Geopackages": [ResoureType.Geopackage],
+            "Models": [ResoureType.Model],
+            "3D Models": [ResoureType.Model3D],
+            "Layer Definitions": [ResoureType.LayerDefinition]
+        }
+        
+        self.tree_items = {}
+        
+        # Add the "All Types" root item
+        all_types_item = QTreeWidgetItem(self.treeWidgetCategories, ["All Types"])
+        all_types_item.setData(0, Qt.UserRole, "all")
+        all_types_item.setExpanded(True)
+        
+        # Add categories as children
+        for category_name, types in categories.items():
+            category_item = QTreeWidgetItem(all_types_item, [category_name])
+            category_item.setData(0, Qt.UserRole, types)
+            self.tree_items[category_name] = category_item
+        
+        # Connect the selection changed signal
+        self.treeWidgetCategories.itemSelectionChanged.connect(self.on_tree_selection_changed)
+        
+        # Select the "All Types" item by default
+        self.treeWidgetCategories.setCurrentItem(all_types_item)
+
+    def on_tree_selection_changed(self):
+        """
+        Handle the selection change in the tree widget.
+        Update the resource filter accordingly.
+        """
+        # Update the checkbox states dictionary (which is now just for filtering logic)
+        self.update_checkbox_states()
+        
+        # Update the resource filter based on tree selection
+        self.update_resource_filter()
