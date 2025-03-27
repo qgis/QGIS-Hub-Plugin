@@ -87,8 +87,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Resources
         self.resources = []
         self.selected_resource = None
-        self.checkbox_states = {}
-        self.update_checkbox_states()
+        self.filter_states = {}
+        self.update_filter_states()
 
         # Setup resource model and proxy model first
         self.resource_model = QStandardItemModel()
@@ -248,10 +248,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.resize_columns()
         self.update_title_bar()
 
-    def update_checkbox_states(self):
+    def update_filter_states(self):
         """
         Create a dictionary with resource types and their filter states.
-        This method is maintained for compatibility but now gets states from the tree selection.
+        This method gets filter states from the tree selection.
         """
         selected_items = self.treeWidgetCategories.selectedItems()
         selected_types = None
@@ -262,7 +262,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Default to all types selected if nothing is selected or "all" is selected
         is_all_selected = not selected_types or selected_types == "all"
         
-        self.checkbox_states = {
+        self.filter_states = {
             ResoureType.Geopackage: is_all_selected or (selected_types and ResoureType.Geopackage in selected_types),
             ResoureType.Style: is_all_selected or (selected_types and ResoureType.Style in selected_types),
             ResoureType.Model: is_all_selected or (selected_types and ResoureType.Model in selected_types),
@@ -273,23 +273,23 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def update_resource_filter(self):
         current_text = self.lineEditSearch.text()
 
-        self.update_checkbox_states()
+        self.update_filter_states()
 
         filter_regexp_parts = ["NONE"]
-        for resource_type, checked in self.checkbox_states.items():
+        for resource_type, checked in self.filter_states.items():
             if checked:
                 filter_regexp_parts.append(resource_type)
 
         filter_regexp = QRegExp("|".join(filter_regexp_parts), Qt.CaseInsensitive)
         self.proxy_model.setFilterRegExp(filter_regexp)
         self.proxy_model.setRolesToFilter([ResourceTypeRole])
-        self.proxy_model.setCheckboxStates(self.checkbox_states)
+        self.proxy_model.setCheckboxStates(self.filter_states)
         self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
         self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
         self.proxy_model.setRolesToFilter([NameRole, CreatorRole])
-        self.proxy_model.setCheckboxStates(self.checkbox_states)
+        self.proxy_model.setCheckboxStates(self.filter_states)
 
         self.update_title_bar()
 
@@ -679,7 +679,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         Update the resource filter accordingly.
         """
         # Update the checkbox states dictionary (which is now just for filtering logic)
-        self.update_checkbox_states()
+        self.update_filter_states()
         
         # Update the resource filter based on tree selection
         self.update_resource_filter()
