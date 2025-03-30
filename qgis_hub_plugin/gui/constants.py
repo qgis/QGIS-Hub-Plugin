@@ -14,6 +14,8 @@ class ResoureType:
     Geopackage = "Geopackage"
     Model3D = "3DModel"
     LayerDefinition = "LayerDefinition"
+    Map = "Map"
+    Unknown = "Unknown"  # Catch-all for any new resource types added to the API in the future
 
 
 # Resource type categories for display in the UI
@@ -22,5 +24,7 @@ ResoureTypeCategories = {
     "Geopackages": [ResoureType.Geopackage],
     "Models": [ResoureType.Model],
     "3D Models": [ResoureType.Model3D],
-    "Layer Definitions": [ResoureType.LayerDefinition]
+    "Layer Definitions": [ResoureType.LayerDefinition],
+    "Maps": [ResoureType.Map],
+    "Other": [ResoureType.Unknown]  # Category for any unknown resource types
 }

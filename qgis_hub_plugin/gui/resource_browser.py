@@ -263,12 +263,15 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Default to all types selected if nothing is selected or "all" is selected
         is_all_selected = not selected_types or selected_types == "all"
         
+        # Create a dictionary with all known resource types
         self.filter_states = {
             ResoureType.Geopackage: is_all_selected or (selected_types and ResoureType.Geopackage in selected_types),
             ResoureType.Style: is_all_selected or (selected_types and ResoureType.Style in selected_types),
             ResoureType.Model: is_all_selected or (selected_types and ResoureType.Model in selected_types),
             ResoureType.Model3D: is_all_selected or (selected_types and ResoureType.Model3D in selected_types),
             ResoureType.LayerDefinition: is_all_selected or (selected_types and ResoureType.LayerDefinition in selected_types),
+            ResoureType.Map: is_all_selected or (selected_types and ResoureType.Map in selected_types),
+            ResoureType.Unknown: is_all_selected or (selected_types and ResoureType.Unknown in selected_types),
         }
 
     def update_resource_filter(self):
@@ -650,8 +653,28 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         all_types_item.setData(0, Qt.UserRole, "all")
         all_types_item.setExpanded(True)
         
+        # Check if we have any unknown resource types in the resources
+        has_unknown_resources = False
+        if self.resources:
+            known_types = [
+                ResoureType.Geopackage, 
+                ResoureType.Style, 
+                ResoureType.Model, 
+                ResoureType.Model3D, 
+                ResoureType.LayerDefinition,
+                ResoureType.Map
+            ]
+            for resource in self.resources:
+                if resource.get("resource_type") not in known_types:
+                    has_unknown_resources = True
+                    break
+        
         # Add categories as children - now using the constant from constants.py
         for category_name, types in ResoureTypeCategories.items():
+            # Skip "Other" category if there are no unknown resource types
+            if category_name == "Other" and not has_unknown_resources:
+                continue
+                
             category_item = QTreeWidgetItem(all_types_item, [category_name])
             category_item.setData(0, Qt.UserRole, types)
             self.tree_items[category_name] = category_item
