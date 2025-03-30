@@ -14,3 +14,13 @@ class ResoureType:
     Geopackage = "Geopackage"
     Model3D = "3DModel"
     LayerDefinition = "LayerDefinition"
+
+
+# Resource type categories for display in the UI
+ResoureTypeCategories = {
+    "Styles": [ResoureType.Style],
+    "Geopackages": [ResoureType.Geopackage],
+    "Models": [ResoureType.Model],
+    "3D Models": [ResoureType.Model3D],
+    "Layer Definitions": [ResoureType.LayerDefinition]
+}

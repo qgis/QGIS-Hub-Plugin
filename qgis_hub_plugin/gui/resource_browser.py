@@ -32,6 +32,7 @@ from qgis.PyQt.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsScene,
     QSizePolicy,
+    QTreeWidgetItem,
 )
 
 from qgis_hub_plugin.__about__ import __uri_homepage__
@@ -42,6 +43,7 @@ from qgis_hub_plugin.gui.constants import (
     NameRole,
     ResourceTypeRole,
     ResoureType,
+    ResoureTypeCategories,
 )
 from qgis_hub_plugin.gui.resource_item import AttributeSortingItem, ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger, PlgOptionsManager
@@ -86,12 +88,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Resources
         self.resources = []
         self.selected_resource = None
-        self.checkbox_states = {}
-        self.update_checkbox_states()
+        self.filter_states = {}
+        self.update_filter_states()
 
+        # Setup resource model and proxy model first
         self.resource_model = QStandardItemModel()
         self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
+
+        # Now setup tree widget which depends on proxy_model
+        self.setup_resource_type_tree()
 
         self.listViewResources.setModel(self.proxy_model)
         self.treeViewResources.setModel(self.proxy_model)
@@ -141,13 +147,6 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             lambda: self.populate_resources(force_update=True)
         )
         self.buttonBox.rejected.connect(self.store_setting)
-
-        # TODO(IS): Make it dynamic
-        self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxModel3D.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxLayerDefinition.stateChanged.connect(self.update_resource_filter)
 
         # Match with the size of the thumbnail
         self.iconSizeSlider.setMinimum(20)
@@ -250,41 +249,48 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.resize_columns()
         self.update_title_bar()
 
-    def update_checkbox_states(self):
-        geopackage_checked = self.checkBoxGeopackage.isChecked()
-        style_checked = self.checkBoxStyle.isChecked()
-        model_checked = self.checkBoxModel.isChecked()
-        model3d_checked = self.checkBoxModel3D.isChecked()
-        layer_definition_checked = self.checkBoxLayerDefinition.isChecked()
-
-        self.checkbox_states = {
-            ResoureType.Geopackage: geopackage_checked,
-            ResoureType.Style: style_checked,
-            ResoureType.Model: model_checked,
-            ResoureType.Model3D: model3d_checked,
-            ResoureType.LayerDefinition: layer_definition_checked,
+    def update_filter_states(self):
+        """
+        Create a dictionary with resource types and their filter states.
+        This method gets filter states from the tree selection.
+        """
+        selected_items = self.treeWidgetCategories.selectedItems()
+        selected_types = None
+        
+        if selected_items:
+            selected_types = selected_items[0].data(0, Qt.UserRole)
+            
+        # Default to all types selected if nothing is selected or "all" is selected
+        is_all_selected = not selected_types or selected_types == "all"
+        
+        self.filter_states = {
+            ResoureType.Geopackage: is_all_selected or (selected_types and ResoureType.Geopackage in selected_types),
+            ResoureType.Style: is_all_selected or (selected_types and ResoureType.Style in selected_types),
+            ResoureType.Model: is_all_selected or (selected_types and ResoureType.Model in selected_types),
+            ResoureType.Model3D: is_all_selected or (selected_types and ResoureType.Model3D in selected_types),
+            ResoureType.LayerDefinition: is_all_selected or (selected_types and ResoureType.LayerDefinition in selected_types),
         }
 
     def update_resource_filter(self):
         current_text = self.lineEditSearch.text()
 
-        self.update_checkbox_states()
+        self.update_filter_states()
 
         filter_regexp_parts = ["NONE"]
-        for resource_type, checked in self.checkbox_states.items():
+        for resource_type, checked in self.filter_states.items():
             if checked:
                 filter_regexp_parts.append(resource_type)
 
         filter_regexp = QRegExp("|".join(filter_regexp_parts), Qt.CaseInsensitive)
         self.proxy_model.setFilterRegExp(filter_regexp)
         self.proxy_model.setRolesToFilter([ResourceTypeRole])
-        self.proxy_model.setCheckboxStates(self.checkbox_states)
+        self.proxy_model.setCheckboxStates(self.filter_states)
         self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
         self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
         self.proxy_model.setRolesToFilter([NameRole, CreatorRole])
-        self.proxy_model.setCheckboxStates(self.checkbox_states)
+        self.proxy_model.setCheckboxStates(self.filter_states)
 
         self.update_title_bar()
 
@@ -625,3 +631,89 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def update_icon_size(self, size):
         self.listViewResources.setIconSize(QSize(size, size))
+
+    def setup_resource_type_tree(self):
+        """
+        Setup the resource type tree widget with available resource types.
+        The tree will have a main "Resource Types" item with child items for each resource type.
+        """
+        # Clear the tree widget
+        self.treeWidgetCategories.clear()
+        
+        # Create the root item
+        self.treeWidgetCategories.invisibleRootItem()
+        
+        self.tree_items = {}
+        
+        # Add the "All Types" root item
+        all_types_item = QTreeWidgetItem(self.treeWidgetCategories, ["All Types"])
+        all_types_item.setData(0, Qt.UserRole, "all")
+        all_types_item.setExpanded(True)
+        
+        # Add categories as children - now using the constant from constants.py
+        for category_name, types in ResoureTypeCategories.items():
+            category_item = QTreeWidgetItem(all_types_item, [category_name])
+            category_item.setData(0, Qt.UserRole, types)
+            self.tree_items[category_name] = category_item
+        
+        # Connect the selection changed signal
+        self.treeWidgetCategories.itemSelectionChanged.connect(self.on_tree_selection_changed)
+        
+        # Select the "All Types" item by default
+        self.treeWidgetCategories.setCurrentItem(all_types_item)
+        
+        # Resize the tree widget to fit the content
+        self.resize_tree_widget()
+
+    def on_tree_selection_changed(self):
+        """
+        Handle the selection change in the tree widget.
+        Update the resource filter accordingly.
+        """
+        # Update the checkbox states dictionary (which is now just for filtering logic)
+        self.update_filter_states()
+        
+        # Update the resource filter based on tree selection
+        self.update_resource_filter()
+
+    def resize_tree_widget(self):
+        """
+        Resize the tree widget to fit its content without extra blank space.
+        This adjusts the width of the categories tree based on the content.
+        """
+        if not self.treeWidgetCategories.topLevelItemCount():
+            return
+            
+        # Start with a small margin to prevent text from being right at the edge
+        max_width = 30
+        
+        # Check the width needed for each item
+        for i in range(self.treeWidgetCategories.topLevelItemCount()):
+            top_item = self.treeWidgetCategories.topLevelItem(i)
+            # Get width of top-level item
+            text_width = self.treeWidgetCategories.fontMetrics().horizontalAdvance(top_item.text(0))
+            max_width = max(max_width, text_width)
+            
+            # Check width for child items
+            for j in range(top_item.childCount()):
+                child_item = top_item.child(j)
+                # Child items need indentation, so add some extra width
+                child_text_width = self.treeWidgetCategories.fontMetrics().horizontalAdvance(child_item.text(0)) + 20
+                max_width = max(max_width, child_text_width)
+        
+        # Add some padding for better appearance
+        max_width += 40
+        
+        # Ensure the width isn't too small
+        max_width = max(max_width, 100)
+        
+        # Set only the minimum width to allow QSplitter to be resizable
+        self.widget_category_section.setMinimumWidth(max_width)
+        
+        # Set initial width of the QSplitter at the optimal size
+        sizes = self.splitter_categories_resources.sizes()
+        if sizes:
+            # Calculate the total width of the splitter
+            total_width = sum(sizes)
+            # Set initial positions - give the category section its optimal width
+            self.splitter_categories_resources.setSizes([max_width, total_width - max_width])
