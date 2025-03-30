@@ -374,6 +374,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.addQGISPushButton.setToolTip(
                 self.tr("Load the layer definition to QGIS")
             )
+        elif self.selected_resource.resource_type == ResoureType.Map:
+            self.addQGISPushButton.setText(self.tr("View in Browser"))
+            self.addQGISPushButton.setToolTip(
+                self.tr("Preview the map in your browser")
+            )
         else:
             self.addQGISPushButton.setVisible(False)
 
@@ -472,6 +477,11 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 self.add_geopackage_to_qgis()
             elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
                 self.add_layer_definition_to_qgis()
+            elif self.selected_resource.resource_type == ResoureType.Map:
+                # For Map resources, preview in browser instead of adding to QGIS
+                map_url = self.selected_resource.file
+                QDesktopServices.openUrl(QUrl(map_url))
+                self.show_success_message(self.tr(f"Opening map {self.selected_resource.name} in your browser"))
         except DownloadError as e:
             self.show_error_message(str(e))
 
