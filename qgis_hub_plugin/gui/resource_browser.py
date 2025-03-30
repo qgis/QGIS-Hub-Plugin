@@ -42,6 +42,7 @@ from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
     NameRole,
+    ResourceSubtypeRole,
     ResourceTypeRole,
     ResoureType,
     ResoureTypeCategories,
@@ -285,15 +286,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         """
         Create a dictionary with resource types and their filter states.
         This method gets filter states from the tree selection.
+        Also handles filtering by subtypes when a subtype is selected.
         """
         selected_items = self.treeWidgetCategories.selectedItems()
-        selected_types = None
+        selected_data = None
         
         if selected_items:
-            selected_types = selected_items[0].data(0, Qt.UserRole)
+            selected_data = selected_items[0].data(0, Qt.UserRole)
             
         # Default to all types selected if nothing is selected or "all" is selected
-        is_all_selected = not selected_types or selected_types == "all"
+        is_all_selected = not selected_data or selected_data == "all"
         
         # Clear existing filter states
         self.filter_states = {}
@@ -302,10 +304,32 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         for attr in dir(ResoureType):
             if not attr.startswith('__') and isinstance(getattr(ResoureType, attr), str):
                 resource_type = getattr(ResoureType, attr)
-                self.filter_states[resource_type] = (
-                    is_all_selected or 
-                    (selected_types and resource_type in selected_types)
-                )
+                
+                # If "All Types" is selected, or this type is in the selected category
+                if is_all_selected or (isinstance(selected_data, list) and resource_type in selected_data):
+                    self.filter_states[resource_type] = True
+                # If a specific subtype is selected (dictionary with type and subtype)
+                elif isinstance(selected_data, dict) and selected_data.get('type') == resource_type:
+                    # This resource type is enabled, but we'll filter by subtype
+                    self.filter_states[resource_type] = True
+                    
+                    selected_subtype = selected_data.get('subtype')
+                    
+                    # Enable the specific subtype filter
+                    subtype_key = f"{resource_type}:{selected_subtype}"
+                    self.filter_states[subtype_key] = True
+                    
+                    # Now set other subtypes to False
+                    if self.resources:
+                        for resource in self.resources:
+                            if (resource.get('resource_type') == resource_type and 
+                                resource.get('resource_subtype') and 
+                                resource.get('resource_subtype') != selected_subtype):
+                                # Create a key for this type+subtype combo and set it to False
+                                other_subtype_key = f"{resource_type}:{resource.get('resource_subtype')}"
+                                self.filter_states[other_subtype_key] = False
+                else:
+                    self.filter_states[resource_type] = False
 
     def update_resource_filter(self):
         current_text = self.lineEditSearch.text()
@@ -698,6 +722,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         """
         Setup the resource type tree widget with available resource types.
         The tree will have a main "Resource Types" item with child items for each resource type.
+        Resource subtypes will be shown as children of their type.
         """
         # Clear the tree widget
         self.treeWidgetCategories.clear()
@@ -711,6 +736,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         all_types_item = QTreeWidgetItem(self.treeWidgetCategories, ["All Types"])
         all_types_item.setData(0, Qt.UserRole, "all")
         all_types_item.setExpanded(True)
+        # Make "All Types" bold
+        font = all_types_item.font(0)
+        font.setBold(True)
+        all_types_item.setFont(0, font)
         
         # Get the list of known types from the ResoureTypeCategories 
         # to keep it consistent with our filter states
@@ -733,7 +762,40 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         for category_name, types in ResoureTypeCategories.items():
             category_item = QTreeWidgetItem(all_types_item, [category_name])
             category_item.setData(0, Qt.UserRole, types)
+            # Make category names bold
+            font = category_item.font(0)
+            font.setBold(True)
+            category_item.setFont(0, font)
             self.tree_items[category_name] = category_item
+            
+            # Collect subtypes for this category
+            if self.resources:
+                subtypes_dict = {}
+                # First pass - collect all subtypes and their counts
+                for resource in self.resources:
+                    resource_type = resource.get("resource_type")
+                    resource_subtype = resource.get("resource_subtype")
+                    
+                    # If the resource type belongs to this category and has a subtype
+                    if resource_type in types and resource_subtype:
+                        if resource_subtype not in subtypes_dict:
+                            subtypes_dict[resource_subtype] = 0
+                        subtypes_dict[resource_subtype] += 1
+                
+                # Second pass - add subtype items to the tree
+                for subtype, count in subtypes_dict.items():
+                    subtype_label = f"{subtype} ({count})"
+                    subtype_item = QTreeWidgetItem(category_item, [subtype_label])
+                    
+                    # Store the resource type and subtype for filtering
+                    subtype_data = {
+                        "type": types[0],  # Assuming one type per category for simplicity
+                        "subtype": subtype
+                    }
+                    subtype_item.setData(0, Qt.UserRole, subtype_data)
+                    
+                    # Add the subtype to the tree_items dictionary for later reference
+                    self.tree_items[f"{category_name}:{subtype}"] = subtype_item
         
         # Add dynamic categories for any new resource types found
         for unknown_type, count in unknown_resource_types.items():
@@ -741,7 +803,40 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             category_name = f"{unknown_type}s"
             category_item = QTreeWidgetItem(all_types_item, [category_name])
             category_item.setData(0, Qt.UserRole, [unknown_type])
+            # Make dynamic category names bold
+            font = category_item.font(0)
+            font.setBold(True)
+            category_item.setFont(0, font)
             self.tree_items[category_name] = category_item
+            
+            # Also add subtypes for unknown types
+            if self.resources:
+                subtypes_dict = {}
+                # Collect all subtypes and their counts
+                for resource in self.resources:
+                    resource_type = resource.get("resource_type")
+                    resource_subtype = resource.get("resource_subtype")
+                    
+                    # If this resource is of the unknown type and has a subtype
+                    if resource_type == unknown_type and resource_subtype:
+                        if resource_subtype not in subtypes_dict:
+                            subtypes_dict[resource_subtype] = 0
+                        subtypes_dict[resource_subtype] += 1
+                
+                # Add subtype items to the tree
+                for subtype, count in subtypes_dict.items():
+                    subtype_label = f"{subtype} ({count})"
+                    subtype_item = QTreeWidgetItem(category_item, [subtype_label])
+                    
+                    # Store the resource type and subtype for filtering
+                    subtype_data = {
+                        "type": unknown_type,
+                        "subtype": subtype
+                    }
+                    subtype_item.setData(0, Qt.UserRole, subtype_data)
+                    
+                    # Add the subtype to the tree_items dictionary
+                    self.tree_items[f"{category_name}:{subtype}"] = subtype_item
         
         # Connect the selection changed signal
         self.treeWidgetCategories.itemSelectionChanged.connect(self.on_tree_selection_changed)
@@ -771,30 +866,42 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if not self.treeWidgetCategories.topLevelItemCount():
             return
             
-        # Start with a small margin to prevent text from being right at the edge
-        max_width = 30
+        # Start with a larger base margin to prevent truncation
+        max_width = 50
+        font_metrics = self.treeWidgetCategories.fontMetrics()
         
-        # Check the width needed for each item
+        # Check the width needed for each item including nested child items
         for i in range(self.treeWidgetCategories.topLevelItemCount()):
             top_item = self.treeWidgetCategories.topLevelItem(i)
+            
             # Get width of top-level item
-            text_width = self.treeWidgetCategories.fontMetrics().horizontalAdvance(top_item.text(0))
+            text_width = font_metrics.horizontalAdvance(top_item.text(0))
             max_width = max(max_width, text_width)
             
-            # Check width for child items
+            # Process category items (first level)
             for j in range(top_item.childCount()):
-                child_item = top_item.child(j)
-                # Child items need indentation, so add some extra width
-                child_text_width = self.treeWidgetCategories.fontMetrics().horizontalAdvance(child_item.text(0)) + 20
-                max_width = max(max_width, child_text_width)
+                category_item = top_item.child(j)
+                # Add indentation for first level
+                category_text_width = font_metrics.horizontalAdvance(category_item.text(0)) + 30
+                max_width = max(max_width, category_text_width)
+                
+                # Process subtype items (second level) - these often have longer names with counts
+                for k in range(category_item.childCount()):
+                    subtype_item = category_item.child(k)
+                    # Add extra indentation for second level items
+                    subtype_text_width = font_metrics.horizontalAdvance(subtype_item.text(0)) + 60
+                    max_width = max(max_width, subtype_text_width)
         
-        # Add some padding for better appearance
-        max_width += 40
+        # Add more generous padding for better appearance and to ensure no truncation
+        max_width += 60
         
         # Ensure the width isn't too small
-        max_width = max(max_width, 100)
+        max_width = max(max_width, 180)  # Increased minimum width
         
-        # Set only the minimum width to allow QSplitter to be resizable
+        # Expand all items to make subtype items visible
+        self.treeWidgetCategories.expandAll()
+        
+        # Set the width for the category section
         self.widget_category_section.setMinimumWidth(max_width)
         
         # Set initial width of the QSplitter at the optimal size

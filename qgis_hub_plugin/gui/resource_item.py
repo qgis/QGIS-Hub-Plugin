@@ -5,6 +5,7 @@ from qgis.PyQt.QtGui import QIcon, QStandardItem
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
     NameRole,
+    ResourceSubtypeRole,
     ResourceTypeRole,
     SortingRole,
 )
@@ -41,6 +42,7 @@ class ResourceItem(QStandardItem):
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
         self.setData(self.creator, CreatorRole)
+        self.setData(self.resource_subtype, ResourceSubtypeRole)
 
 
 class AttributeSortingItem(QStandardItem):
