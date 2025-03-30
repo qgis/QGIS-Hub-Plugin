@@ -667,6 +667,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Show the list view
         self.viewStackedWidget.setCurrentIndex(1)
+        
+        # Hide the icon size slider since it's not relevant for list view
+        self.iconSizeSlider.setVisible(False)
 
     def show_icon_view(self):
         # Update the selected on other view
@@ -679,6 +682,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Show the icon (grid) view
         self.viewStackedWidget.setCurrentIndex(0)
+        
+        # Show the icon size slider since it's relevant for icon view
+        self.iconSizeSlider.setVisible(True)
 
     def resize_columns(self):
         if self.resource_model.rowCount() > 0:
