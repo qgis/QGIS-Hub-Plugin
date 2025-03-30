@@ -87,6 +87,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # and before the description (row 7)
         form_layout.insertRow(7, self.labelDependenciesLabel, self.labelDependencies)
 
+        # Connect the close preview button
+        self.closePreviewButton.clicked.connect(self.hide_preview)
+        self.closePreviewButton.setToolTip(self.tr("Close preview panel"))
+        # Set a larger font size for the close button
+        font = self.closePreviewButton.font()
+        font.setPointSize(14)
+        self.closePreviewButton.setFont(font)
+
         # Buttons
         self.listViewToolButton.setIcon(
             QgsApplication.getThemeIcon("mActionOpenTable.svg"),
