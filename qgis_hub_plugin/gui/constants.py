@@ -22,9 +22,9 @@ class ResoureType:
 # Any new resource type detected will be automatically added
 ResoureTypeCategories = {
     "Styles": [ResoureType.Style],
-    "Geopackages": [ResoureType.Geopackage],
+    "Projects": [ResoureType.Geopackage],
     "Models": [ResoureType.Model],
     "3D Models": [ResoureType.Model3D],
-    "Layer Definitions": [ResoureType.LayerDefinition],
-    "Maps": [ResoureType.Map],
+    "QLR": [ResoureType.LayerDefinition],
+    "Map Gallery": [ResoureType.Map],
 }
