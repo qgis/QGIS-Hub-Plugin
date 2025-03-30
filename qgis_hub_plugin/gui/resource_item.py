@@ -5,6 +5,7 @@ from qgis.PyQt.QtGui import QIcon, QStandardItem
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
     NameRole,
+    ResourceSubtypeRole,
     ResourceTypeRole,
     SortingRole,
 )
@@ -25,6 +26,7 @@ class ResourceItem(QStandardItem):
         self.upload_date = datetime.fromisoformat(upload_date_string)
         self.download_count = params.get("download_count")
         self.description = params.get("description")
+        self.dependencies = params.get("dependencies")  # Add support for dependencies
         self.file = params.get("file")
         self.thumbnail = params.get("thumbnail")
 
@@ -40,6 +42,7 @@ class ResourceItem(QStandardItem):
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
         self.setData(self.creator, CreatorRole)
+        self.setData(self.resource_subtype, ResourceSubtypeRole)
 
 
 class AttributeSortingItem(QStandardItem):
