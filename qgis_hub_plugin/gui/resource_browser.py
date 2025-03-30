@@ -31,6 +31,7 @@ from qgis.PyQt.QtWidgets import (
     QFileDialog,
     QGraphicsPixmapItem,
     QGraphicsScene,
+    QLabel,
     QSizePolicy,
     QTreeWidgetItem,
 )
@@ -68,6 +69,23 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.iface = iface
         self.log = PlgLogger().log
         self.plg_settings = PlgOptionsManager()
+
+        # Add dependencies label to the preview form layout after the upload date
+        self.labelDependenciesLabel = QLabel(self.groupBoxPreview)
+        self.labelDependenciesLabel.setText(self.tr("Dependencies"))
+        self.labelDependenciesLabel.setVisible(False)
+        
+        self.labelDependencies = QLabel(self.groupBoxPreview)
+        self.labelDependencies.setText("")
+        self.labelDependencies.setWordWrap(True)
+        self.labelDependencies.setVisible(False)
+        
+        # Get the form layout from the preview group box
+        form_layout = self.groupBoxPreview.layout()
+        
+        # Insert the dependencies labels after the uploaded date row (row 6)
+        # and before the description (row 7)
+        form_layout.insertRow(7, self.labelDependenciesLabel, self.labelDependencies)
 
         # Buttons
         self.listViewToolButton.setIcon(
@@ -228,6 +246,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 return
 
             self.resources = response.get("results", {})
+            
+            # Check for new resource types that don't exist in constants.py
+            self.register_new_resource_types()
 
         self.resource_model.clear()
         self.resource_model.setHorizontalHeaderLabels(
@@ -246,6 +267,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if force_update:
             self.show_success_message("Successfully update the resources")
 
+        # Setup resource type tree after resources are loaded
+        self.setup_resource_type_tree()
+        
         self.resize_columns()
         self.update_title_bar()
 
@@ -263,16 +287,17 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Default to all types selected if nothing is selected or "all" is selected
         is_all_selected = not selected_types or selected_types == "all"
         
-        # Create a dictionary with all known resource types
-        self.filter_states = {
-            ResoureType.Geopackage: is_all_selected or (selected_types and ResoureType.Geopackage in selected_types),
-            ResoureType.Style: is_all_selected or (selected_types and ResoureType.Style in selected_types),
-            ResoureType.Model: is_all_selected or (selected_types and ResoureType.Model in selected_types),
-            ResoureType.Model3D: is_all_selected or (selected_types and ResoureType.Model3D in selected_types),
-            ResoureType.LayerDefinition: is_all_selected or (selected_types and ResoureType.LayerDefinition in selected_types),
-            ResoureType.Map: is_all_selected or (selected_types and ResoureType.Map in selected_types),
-            ResoureType.Unknown: is_all_selected or (selected_types and ResoureType.Unknown in selected_types),
-        }
+        # Clear existing filter states
+        self.filter_states = {}
+        
+        # Get all resource types from ResoureType class dynamically
+        for attr in dir(ResoureType):
+            if not attr.startswith('__') and isinstance(getattr(ResoureType, attr), str):
+                resource_type = getattr(ResoureType, attr)
+                self.filter_states[resource_type] = (
+                    is_all_selected or 
+                    (selected_types and resource_type in selected_types)
+                )
 
     def update_resource_filter(self):
         current_text = self.lineEditSearch.text()
@@ -372,6 +397,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.labelDownloadCount.setText(str(resource.download_count))
         pretty_upload_date = resource.upload_date.strftime("%d %B %Y").lstrip("0")
         self.labelUploaded.setText(pretty_upload_date)
+        
+        # Show dependencies if they exist (for Models)
+        if hasattr(self, 'labelDependencies') and hasattr(self, 'labelDependenciesLabel'):
+            # Convert dependencies to boolean - check if it's not None and not empty
+            has_dependencies = resource.resource_type == ResoureType.Model and resource.dependencies is not None and resource.dependencies != ""
+            self.labelDependenciesLabel.setVisible(has_dependencies)
+            self.labelDependencies.setVisible(has_dependencies)
+            if has_dependencies:
+                self.labelDependencies.setText(resource.dependencies)
+        
         self.textBrowserDescription.setHtml(resource.description)
 
     def hide_preview(self):
@@ -653,30 +688,35 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         all_types_item.setData(0, Qt.UserRole, "all")
         all_types_item.setExpanded(True)
         
+        # Get the list of known types from the ResoureTypeCategories 
+        # to keep it consistent with our filter states
+        known_types = []
+        for types in ResoureTypeCategories.values():
+            for resource_type in types:
+                known_types.append(resource_type)
+        
         # Check if we have any unknown resource types in the resources
-        has_unknown_resources = False
+        unknown_resource_types = {}
         if self.resources:
-            known_types = [
-                ResoureType.Geopackage, 
-                ResoureType.Style, 
-                ResoureType.Model, 
-                ResoureType.Model3D, 
-                ResoureType.LayerDefinition,
-                ResoureType.Map
-            ]
             for resource in self.resources:
-                if resource.get("resource_type") not in known_types:
-                    has_unknown_resources = True
-                    break
+                resource_type = resource.get("resource_type")
+                if resource_type and resource_type not in known_types:
+                    if resource_type not in unknown_resource_types:
+                        unknown_resource_types[resource_type] = 0
+                    unknown_resource_types[resource_type] += 1
         
         # Add categories as children - now using the constant from constants.py
         for category_name, types in ResoureTypeCategories.items():
-            # Skip "Other" category if there are no unknown resource types
-            if category_name == "Other" and not has_unknown_resources:
-                continue
-                
             category_item = QTreeWidgetItem(all_types_item, [category_name])
             category_item.setData(0, Qt.UserRole, types)
+            self.tree_items[category_name] = category_item
+        
+        # Add dynamic categories for any new resource types found
+        for unknown_type, count in unknown_resource_types.items():
+            # Create a user-friendly category name (simple pluralization)
+            category_name = f"{unknown_type}s"
+            category_item = QTreeWidgetItem(all_types_item, [category_name])
+            category_item.setData(0, Qt.UserRole, [unknown_type])
             self.tree_items[category_name] = category_item
         
         # Connect the selection changed signal
@@ -740,3 +780,38 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             total_width = sum(sizes)
             # Set initial positions - give the category section its optimal width
             self.splitter_categories_resources.setSizes([max_width, total_width - max_width])
+
+    def register_new_resource_types(self):
+        """
+        Dynamically register new resource types found in the API response.
+        This allows the plugin to handle new resource types without code changes.
+        """
+        if not self.resources:
+            return
+            
+        # Get existing resource types from ResoureType class
+        existing_types = {getattr(ResoureType, attr) for attr in dir(ResoureType) 
+                         if not attr.startswith('__') and isinstance(getattr(ResoureType, attr), str)}
+        
+        # Find new resource types in the API response
+        new_types = set()
+        for resource in self.resources:
+            resource_type = resource.get("resource_type")
+            if resource_type and resource_type not in existing_types:
+                new_types.add(resource_type)
+        
+        # Add new resource types to both the ResoureType class and ResoureTypeCategories
+        for new_type in new_types:
+            # Create a clean attribute name from the resource type
+            # Remove spaces and special characters
+            attr_name = ''.join(c for c in new_type if c.isalnum())
+            
+            # Add to ResoureType class if not already there
+            if not hasattr(ResoureType, attr_name):
+                setattr(ResoureType, attr_name, new_type)
+                
+            # Create a new category for this type in ResoureTypeCategories
+            # Use the original name with proper spacing for display
+            category_name = f"{new_type}s"  # Simple pluralization
+            if category_name not in ResoureTypeCategories:
+                ResoureTypeCategories[category_name] = [new_type]

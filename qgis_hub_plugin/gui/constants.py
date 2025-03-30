@@ -8,6 +8,7 @@ SortingRole = Qt.UserRole + 4
 
 
 # Type of resources, based on the QGIS Hub API
+# These are the known resource types, but the plugin will handle any new types dynamically
 class ResoureType:
     Model = "Model"
     Style = "Style"
@@ -15,10 +16,10 @@ class ResoureType:
     Model3D = "3DModel"
     LayerDefinition = "LayerDefinition"
     Map = "Map"
-    Unknown = "Unknown"  # Catch-all for any new resource types added to the API in the future
 
 
 # Resource type categories for display in the UI
+# Any new resource type detected will be automatically added
 ResoureTypeCategories = {
     "Styles": [ResoureType.Style],
     "Geopackages": [ResoureType.Geopackage],
@@ -26,5 +27,4 @@ ResoureTypeCategories = {
     "3D Models": [ResoureType.Model3D],
     "Layer Definitions": [ResoureType.LayerDefinition],
     "Maps": [ResoureType.Map],
-    "Other": [ResoureType.Unknown]  # Category for any unknown resource types
 }

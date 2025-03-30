@@ -25,6 +25,7 @@ class ResourceItem(QStandardItem):
         self.upload_date = datetime.fromisoformat(upload_date_string)
         self.download_count = params.get("download_count")
         self.description = params.get("description")
+        self.dependencies = params.get("dependencies")  # Add support for dependencies
         self.file = params.get("file")
         self.thumbnail = params.get("thumbnail")
 
