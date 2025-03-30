@@ -661,6 +661,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         
         # Select the "All Types" item by default
         self.treeWidgetCategories.setCurrentItem(all_types_item)
+        
+        # Resize the tree widget to fit the content
+        self.resize_tree_widget()
 
     def on_tree_selection_changed(self):
         """
@@ -672,3 +675,45 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         
         # Update the resource filter based on tree selection
         self.update_resource_filter()
+
+    def resize_tree_widget(self):
+        """
+        Resize the tree widget to fit its content without extra blank space.
+        This adjusts the width of the categories tree based on the content.
+        """
+        if not self.treeWidgetCategories.topLevelItemCount():
+            return
+            
+        # Start with a small margin to prevent text from being right at the edge
+        max_width = 30
+        
+        # Check the width needed for each item
+        for i in range(self.treeWidgetCategories.topLevelItemCount()):
+            top_item = self.treeWidgetCategories.topLevelItem(i)
+            # Get width of top-level item
+            text_width = self.treeWidgetCategories.fontMetrics().horizontalAdvance(top_item.text(0))
+            max_width = max(max_width, text_width)
+            
+            # Check width for child items
+            for j in range(top_item.childCount()):
+                child_item = top_item.child(j)
+                # Child items need indentation, so add some extra width
+                child_text_width = self.treeWidgetCategories.fontMetrics().horizontalAdvance(child_item.text(0)) + 20
+                max_width = max(max_width, child_text_width)
+        
+        # Add some padding for better appearance
+        max_width += 40
+        
+        # Ensure the width isn't too small
+        max_width = max(max_width, 100)
+        
+        # Set only the minimum width to allow QSplitter to be resizable
+        self.widget_category_section.setMinimumWidth(max_width)
+        
+        # Set initial width of the QSplitter at the optimal size
+        sizes = self.splitter_categories_resources.sizes()
+        if sizes:
+            # Calculate the total width of the splitter
+            total_width = sum(sizes)
+            # Set initial positions - give the category section its optimal width
+            self.splitter_categories_resources.setSizes([max_width, total_width - max_width])
