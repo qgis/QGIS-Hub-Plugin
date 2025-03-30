@@ -639,9 +639,6 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Clear the tree widget
         self.treeWidgetCategories.clear()
         
-        # Set up the header
-        self.treeWidgetCategories.setHeaderLabel("Resource Types")
-        
         # Create the root item
         self.treeWidgetCategories.invisibleRootItem()
         
