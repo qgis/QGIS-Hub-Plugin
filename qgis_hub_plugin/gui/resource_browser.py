@@ -43,6 +43,7 @@ from qgis_hub_plugin.gui.constants import (
     NameRole,
     ResourceTypeRole,
     ResoureType,
+    ResoureTypeCategories,
 )
 from qgis_hub_plugin.gui.resource_item import AttributeSortingItem, ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger, PlgOptionsManager
@@ -642,15 +643,6 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Create the root item
         self.treeWidgetCategories.invisibleRootItem()
         
-        # Add resource type categories
-        categories = {
-            "Styles": [ResoureType.Style],
-            "Geopackages": [ResoureType.Geopackage],
-            "Models": [ResoureType.Model],
-            "3D Models": [ResoureType.Model3D],
-            "Layer Definitions": [ResoureType.LayerDefinition]
-        }
-        
         self.tree_items = {}
         
         # Add the "All Types" root item
@@ -658,8 +650,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         all_types_item.setData(0, Qt.UserRole, "all")
         all_types_item.setExpanded(True)
         
-        # Add categories as children
-        for category_name, types in categories.items():
+        # Add categories as children - now using the constant from constants.py
+        for category_name, types in ResoureTypeCategories.items():
             category_item = QTreeWidgetItem(all_types_item, [category_name])
             category_item.setData(0, Qt.UserRole, types)
             self.tree_items[category_name] = category_item
