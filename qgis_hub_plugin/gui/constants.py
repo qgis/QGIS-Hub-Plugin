@@ -17,6 +17,7 @@ class ResoureType:
     Model3D = "3DModel"
     LayerDefinition = "LayerDefinition"
     Map = "Map"
+    ProcessingScripts = "ProcessingScript"
 
 
 # Resource type categories for display in the UI
@@ -28,4 +29,5 @@ ResoureTypeCategories = {
     "3D Models": [ResoureType.Model3D],
     "QLR": [ResoureType.LayerDefinition],
     "Map Gallery": [ResoureType.Map],
+    "Processing Scripts": [ResoureType.ProcessingScripts],
 }

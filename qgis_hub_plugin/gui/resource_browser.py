@@ -383,6 +383,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if self.selected_resource.resource_type == ResoureType.Model:
             self.addQGISPushButton.setText(self.tr("Add Model to QGIS"))
             self.addQGISPushButton.setToolTip(self.tr("Add the model to QGIS directly"))
+        elif self.selected_resource.resource_type == ResoureType.ProcessingScripts:
+            self.addQGISPushButton.setText(self.tr("Add Script to QGIS"))
+            self.addQGISPushButton.setToolTip(self.tr("Add the processing script to QGIS directly"))
         elif self.selected_resource.resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
             self.addQGISPushButton.setToolTip(
@@ -506,6 +509,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 map_url = self.selected_resource.file
                 QDesktopServices.openUrl(QUrl(map_url))
                 self.show_success_message(self.tr(f"Opening map {self.selected_resource.name} in your browser"))
+            elif self.selected_resource.resource_type == ResoureType.ProcessingScripts:
+                self.add_processing_script_to_qgis()
         except DownloadError as e:
             self.show_error_message(str(e))
 
@@ -671,6 +676,29 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.show_error_message(
                 self.tr(f"Failed to load layer definition: {layer_name}: {message}")
             )
+
+    @show_busy_cursor
+    def add_processing_script_to_qgis(self):
+        """Add a processing script to QGIS processing scripts folder."""
+        resource = self.selected_resource
+        qgis_user_dir = QgsApplication.qgisSettingsDirPath()
+
+        # Download to qgis_hub subdirectory in the processing scripts folder
+        scripts_directory = Path(qgis_user_dir, "processing", "scripts", "qgis_hub")
+        if not scripts_directory.exists():
+            scripts_directory.mkdir(parents=True, exist_ok=True)
+
+        # Make sure the script has .py extension
+        script_filename = os.path.basename(resource.file)
+        if not script_filename.endswith('.py'):
+            script_filename += '.py'
+            
+        file_path = scripts_directory / script_filename
+
+        download_file(resource.file, file_path)
+        # Refresh the processing toolbox to show the new script
+        QgsApplication.processingRegistry().providerById("script").refreshAlgorithms()
+        self.show_success_message(self.tr(f"Processing script {resource.name} is added to QGIS"))
 
     def update_title_bar(self):
         num_total_resources = len(self.resources)
