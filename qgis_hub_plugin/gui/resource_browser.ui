@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>913</width>
-    <height>658</height>
+    <height>676</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -260,6 +260,9 @@
         <item>
          <widget class="QWidget" name="widget_6" native="true">
           <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="spacing">
+            <number>8</number>
+           </property>
            <property name="leftMargin">
             <number>9</number>
            </property>
@@ -271,9 +274,6 @@
            </property>
            <property name="bottomMargin">
             <number>6</number>
-           </property>
-           <property name="spacing">
-            <number>8</number>
            </property>
            <item>
             <widget class="QPushButton" name="reloadPushButton">
@@ -399,9 +399,15 @@
          </size>
         </property>
         <property name="title">
-         <string>Preview</string>
+         <string/>
         </property>
         <layout class="QFormLayout" name="formLayout_2">
+         <property name="horizontalSpacing">
+          <number>12</number>
+         </property>
+         <property name="verticalSpacing">
+          <number>8</number>
+         </property>
          <property name="leftMargin">
           <number>12</number>
          </property>
@@ -413,12 +419,6 @@
          </property>
          <property name="bottomMargin">
           <number>12</number>
-         </property>
-         <property name="horizontalSpacing">
-          <number>12</number>
-         </property>
-         <property name="verticalSpacing">
-          <number>8</number>
          </property>
          <item row="0" column="0" colspan="2">
           <widget class="QWidget" name="previewHeaderWidget" native="true">
@@ -436,6 +436,13 @@
              <number>0</number>
             </property>
             <item>
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Preview&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <spacer name="previewHeaderSpacer">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
@@ -450,8 +457,18 @@
             </item>
             <item>
              <widget class="QToolButton" name="closePreviewButton">
-              <property name="text">
-               <string>×</string>
+              <property name="maximumSize">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Close preview</string>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>:images/themes/default/mIconClose.svg</normaloff>:images/themes/default/mIconClose.svg</iconset>
               </property>
               <property name="autoRaise">
                <bool>true</bool>
@@ -692,6 +709,9 @@
       <enum>Qt::LeftToRight</enum>
      </property>
      <layout class="QHBoxLayout" name="searchLayout">
+      <property name="spacing">
+       <number>8</number>
+      </property>
       <property name="leftMargin">
        <number>9</number>
       </property>
@@ -703,9 +723,6 @@
       </property>
       <property name="bottomMargin">
        <number>9</number>
-      </property>
-      <property name="spacing">
-       <number>8</number>
       </property>
       <item>
        <widget class="QLabel" name="labelSearch">
