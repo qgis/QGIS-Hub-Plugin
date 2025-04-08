@@ -16,6 +16,22 @@ Unreleased
 
 -->
 
+## 0.4.0 - 2025-04-08
+
+### Added
+- Added support for 'Map' resource type
+- Implemented dynamic resource type handling for future-proof compatibility
+- Added resource subtype filtering with tree hierarchy view
+- Added model dependencies display in preview panel
+- Added close button to resource preview window
+
+### Changed
+- Renamed resource type labels to match QGIS Hub Website
+- Enhanced UI with improved spacing and layout
+- Improved preview panel layout with consistent form spacing
+- Made icon size slider visible only in icon view mode
+- Optimized resource type tree display for better readability
+
 ## 0.3.0 - 2025-02-12
 
 - Update the new resource hub API URL
