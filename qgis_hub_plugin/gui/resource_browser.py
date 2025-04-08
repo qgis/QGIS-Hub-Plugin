@@ -732,8 +732,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         
         self.tree_items = {}
         
-        # Add the "All Types" root item
-        all_types_item = QTreeWidgetItem(self.treeWidgetCategories, ["All Types"])
+        # Add the "All Types" root item with total count
+        total_resources = len(self.resources) if self.resources else 0
+        all_types_item = QTreeWidgetItem(self.treeWidgetCategories, [f"All Types ({total_resources})"])
         all_types_item.setData(0, Qt.UserRole, "all")
         all_types_item.setExpanded(True)
         # Make "All Types" bold
@@ -760,48 +761,56 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         
         # Add categories as children - now using the constant from constants.py
         for category_name, types in ResoureTypeCategories.items():
-            category_item = QTreeWidgetItem(all_types_item, [category_name])
-            category_item.setData(0, Qt.UserRole, types)
-            # Make category names bold
-            font = category_item.font(0)
-            font.setBold(True)
-            category_item.setFont(0, font)
-            self.tree_items[category_name] = category_item
-            
-            # Collect subtypes for this category
+            # Count resources in this category
+            category_count = 0
             if self.resources:
-                subtypes_dict = {}
-                # First pass - collect all subtypes and their counts
-                for resource in self.resources:
-                    resource_type = resource.get("resource_type")
-                    resource_subtype = resource.get("resource_subtype")
-                    
-                    # If the resource type belongs to this category and has a subtype
-                    if resource_type in types and resource_subtype:
-                        if resource_subtype not in subtypes_dict:
-                            subtypes_dict[resource_subtype] = 0
-                        subtypes_dict[resource_subtype] += 1
+                category_count = sum(1 for resource in self.resources 
+                                   if resource.get("resource_type") in types)
+            
+            # Only show categories that have resources
+            if category_count > 0:
+                category_item = QTreeWidgetItem(all_types_item, [f"{category_name} ({category_count})"])
+                category_item.setData(0, Qt.UserRole, types)
+                # Make category names bold
+                font = category_item.font(0)
+                font.setBold(True)
+                category_item.setFont(0, font)
+                self.tree_items[category_name] = category_item
                 
-                # Second pass - add subtype items to the tree
-                for subtype, count in subtypes_dict.items():
-                    subtype_label = f"{subtype} ({count})"
-                    subtype_item = QTreeWidgetItem(category_item, [subtype_label])
+                # Collect subtypes for this category
+                if self.resources:
+                    subtypes_dict = {}
+                    # First pass - collect all subtypes and their counts
+                    for resource in self.resources:
+                        resource_type = resource.get("resource_type")
+                        resource_subtype = resource.get("resource_subtype")
+                        
+                        # If the resource type belongs to this category and has a subtype
+                        if resource_type in types and resource_subtype:
+                            if resource_subtype not in subtypes_dict:
+                                subtypes_dict[resource_subtype] = 0
+                            subtypes_dict[resource_subtype] += 1
                     
-                    # Store the resource type and subtype for filtering
-                    subtype_data = {
-                        "type": types[0],  # Assuming one type per category for simplicity
-                        "subtype": subtype
-                    }
-                    subtype_item.setData(0, Qt.UserRole, subtype_data)
-                    
-                    # Add the subtype to the tree_items dictionary for later reference
-                    self.tree_items[f"{category_name}:{subtype}"] = subtype_item
+                    # Second pass - add subtype items to the tree
+                    for subtype, count in subtypes_dict.items():
+                        subtype_label = f"{subtype} ({count})"
+                        subtype_item = QTreeWidgetItem(category_item, [subtype_label])
+                        
+                        # Store the resource type and subtype for filtering
+                        subtype_data = {
+                            "type": types[0],  # Assuming one type per category for simplicity
+                            "subtype": subtype
+                        }
+                        subtype_item.setData(0, Qt.UserRole, subtype_data)
+                        
+                        # Add the subtype to the tree_items dictionary for later reference
+                        self.tree_items[f"{category_name}:{subtype}"] = subtype_item
         
         # Add dynamic categories for any new resource types found
         for unknown_type, count in unknown_resource_types.items():
             # Create a user-friendly category name (simple pluralization)
             category_name = f"{unknown_type}s"
-            category_item = QTreeWidgetItem(all_types_item, [category_name])
+            category_item = QTreeWidgetItem(all_types_item, [f"{category_name} ({count})"])
             category_item.setData(0, Qt.UserRole, [unknown_type])
             # Make dynamic category names bold
             font = category_item.font(0)
