@@ -19,7 +19,7 @@ Unreleased
 ## 0.4.0 - 2025-04-08
 
 ### Added
-- Added support for 'Map' resource type
+- Added support for 'Map' and 'Processing Scripts' resource type
 - Implemented dynamic resource type handling for future-proof compatibility
 - Added resource subtype filtering with tree hierarchy view
 - Added model dependencies display in preview panel

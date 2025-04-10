@@ -29,23 +29,6 @@
    <property name="spacing">
     <number>8</number>
    </property>
-   <item row="6" column="0">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Close|QDialogButtonBox::Help</set>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <layout class="QVBoxLayout" name="vlayout">
-     <property name="spacing">
-      <number>3</number>
-     </property>
-    </layout>
-   </item>
    <item row="3" column="0">
     <widget class="QWidget" name="widget_4" native="true">
      <property name="sizePolicy">
@@ -621,13 +604,58 @@
           </widget>
          </item>
          <item row="8" column="0">
-          <widget class="QLabel" name="labelDescriptionLabel">
+          <widget class="QLabel" name="labelDependenciesLabel">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
-            <string>Description</string>
+            <string>Dependencies</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
            </property>
           </widget>
          </item>
          <item row="8" column="1">
+          <widget class="QLabel" name="labelDependencies">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <weight>50</weight>
+             <italic>true</italic>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(237, 51, 59)</string>
+           </property>
+           <property name="text">
+            <string>Dependencies</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="0">
+          <widget class="QLabel" name="labelDescriptionLabel">
+           <property name="text">
+            <string>Description</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="1">
           <widget class="QTextBrowser" name="textBrowserDescription">
            <property name="autoFillBackground">
             <bool>true</bool>
@@ -655,7 +683,7 @@
            </property>
           </widget>
          </item>
-         <item row="9" column="0" colspan="2">
+         <item row="10" column="0" colspan="2">
           <widget class="QCheckBox" name="checkBoxOpenDirectory">
            <property name="text">
             <string>Open download directory</string>
@@ -665,7 +693,7 @@
            </property>
           </widget>
          </item>
-         <item row="10" column="0" colspan="2">
+         <item row="11" column="0" colspan="2">
           <widget class="QPushButton" name="pushButtonDownload">
            <property name="minimumSize">
             <size>
@@ -678,7 +706,7 @@
            </property>
           </widget>
          </item>
-         <item row="11" column="0" colspan="2">
+         <item row="12" column="0" colspan="2">
           <widget class="QPushButton" name="addQGISPushButton">
            <property name="minimumSize">
             <size>
@@ -695,6 +723,16 @@
        </widget>
       </item>
      </layout>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close|QDialogButtonBox::Help</set>
+     </property>
     </widget>
    </item>
    <item row="1" column="0" rowspan="2">
@@ -752,6 +790,13 @@
       </item>
      </layout>
     </widget>
+   </item>
+   <item row="0" column="0">
+    <layout class="QVBoxLayout" name="vlayout">
+     <property name="spacing">
+      <number>3</number>
+     </property>
+    </layout>
    </item>
   </layout>
  </widget>
