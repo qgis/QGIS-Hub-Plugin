@@ -1056,6 +1056,4 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         label.setVisible(True)
         labelContent.setVisible(True)
-        layout.addWidget(label)
-        layout.addWidget(labelContent)
         layout.insertRow(row + 1, label, labelContent)
