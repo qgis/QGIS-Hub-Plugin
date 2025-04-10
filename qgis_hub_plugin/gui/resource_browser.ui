@@ -627,6 +627,16 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="font">
+            <font>
+             <weight>50</weight>
+             <italic>true</italic>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(237, 51, 59)</string>
+           </property>
            <property name="text">
             <string>Dependencies</string>
            </property>
