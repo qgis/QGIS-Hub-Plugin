@@ -388,24 +388,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.addQGISPushButton.setToolTip(self.tr("Add the processing script to QGIS directly"))
         elif self.selected_resource.resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Add the style to QGIS style database")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Add the style to QGIS style database"))
         elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Download and load the layers to QGIS")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Download and load the layers to QGIS"))
         elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
             self.addQGISPushButton.setText(self.tr("Add Layer to QGIS"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Load the layer definition to QGIS")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Load the layer definition to QGIS"))
         elif self.selected_resource.resource_type == ResoureType.Map:
             self.addQGISPushButton.setText(self.tr("View in Browser"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Preview the map in your browser")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Preview the map in your browser"))
         else:
             self.addQGISPushButton.setVisible(False)
 
@@ -695,9 +687,55 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             
         file_path = scripts_directory / script_filename
 
+        # Download the script
         download_file(resource.file, file_path)
-        # Refresh the processing toolbox to show the new script
-        QgsApplication.processingRegistry().providerById("script").refreshAlgorithms()
+        
+        # Try to refresh the algorithms to check for import errors
+        script_provider = QgsApplication.processingRegistry().providerById("script")
+        if script_provider:
+            # Before refreshing, get a list of existing algorithms
+            existing_algs = {alg.id() for alg in script_provider.algorithms()}
+            
+            script_provider.refreshAlgorithms()
+            
+            # Check if the script was loaded successfully by looking for the algorithm
+            script_name = Path(script_filename).stem
+            script_found = False
+            error_message = None
+            
+            # Get the new list of algorithms
+            new_algs = {alg.id() for alg in script_provider.algorithms()}
+            
+            # If there are no new algorithms and there was an error loading the script
+            if not (new_algs - existing_algs):
+                # Try to import the module to get the actual error
+                try:
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location(script_name, str(file_path))
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                except Exception as e:
+                    error_message = str(e)
+            
+            # Check if algorithm exists after refresh
+            for alg in script_provider.algorithms():
+                if script_name.lower() in alg.id().lower():
+                    script_found = True
+                    break
+            
+            if not script_found:
+                # If script wasn't loaded, show the actual error message
+                error_msg = f"Failed to load script {resource.name}. "
+                if error_message:
+                    error_msg += f"Error: {error_message}"
+                else:
+                    error_msg += "The script could not be loaded."
+                    
+                self.show_error_message(self.tr(error_msg))
+                # Delete the script file since it failed to load
+                file_path.unlink()
+                return
+                
         self.show_success_message(self.tr(f"Processing script {resource.name} is added to QGIS"))
 
     def update_title_bar(self):
