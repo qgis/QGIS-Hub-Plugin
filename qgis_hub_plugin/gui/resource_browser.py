@@ -430,10 +430,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         pretty_upload_date = resource.upload_date.strftime("%d %B %Y").lstrip("0")
         self.labelUploaded.setText(pretty_upload_date)
         
-        # Show dependencies if they exist (for Models)
+        # Show dependencies if they exist (for Models and Processing Scripts)
         if hasattr(self, 'labelDependencies') and hasattr(self, 'labelDependenciesLabel'):
             # Convert dependencies to boolean - check if it's not None and not empty
-            has_dependencies = resource.resource_type == ResoureType.Model and resource.dependencies is not None and resource.dependencies != ""
+            has_dependencies = (resource.resource_type in [ResoureType.Model, ResoureType.ProcessingScripts] and 
+                              resource.dependencies is not None and 
+                              resource.dependencies != "")
             self.labelDependenciesLabel.setVisible(has_dependencies)
             self.labelDependencies.setVisible(has_dependencies)
             if has_dependencies:
