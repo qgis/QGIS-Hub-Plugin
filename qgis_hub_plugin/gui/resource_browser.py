@@ -382,24 +382,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             )
         elif self.selected_resource.resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Add the style to QGIS style database")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Add the style to QGIS style database"))
         elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Download and load the layers to QGIS")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Download and load the layers to QGIS"))
         elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
             self.addQGISPushButton.setText(self.tr("Add Layer to QGIS"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Load the layer definition to QGIS")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Load the layer definition to QGIS"))
         elif self.selected_resource.resource_type == ResoureType.Map:
             self.addQGISPushButton.setText(self.tr("View in Browser"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Preview the map in your browser")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Preview the map in your browser"))
         else:
             self.addQGISPushButton.setVisible(False)
 
@@ -422,7 +414,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Description
         self.labelName.setText(resource.name)
-        self.labelType.setText(resource.resource_type)
+        # Use a user-friendly display name for the resource type based on its category
+        display_type = self.get_type_display_name(resource.resource_type)
+        self.labelType.setText(display_type)
         self.labelSubtype.setVisible(bool(resource.resource_subtype))
         self.labelSubtypeLabel.setVisible(bool(resource.resource_subtype))
         if resource.resource_subtype:
@@ -442,13 +436,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         pretty_upload_date = resource.upload_date.strftime("%d %B %Y").lstrip("0")
         self.labelUploaded.setText(pretty_upload_date)
 
-        # Show dependencies if they exist (for Models)
+        # Show dependencies if they exist (for Models and Processing Scripts)
         if hasattr(self, "labelDependencies") and hasattr(
             self, "labelDependenciesLabel"
         ):
             # Convert dependencies to boolean - check if it's not None and not empty
             has_dependencies = (
-                resource.resource_type == ResoureType.Model
+                resource.resource_type in [ResoureType.Model, ResoureType.ProcessingScripts]
                 and resource.dependencies is not None
                 and resource.dependencies != ""
             )
@@ -717,12 +711,56 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         file_path = scripts_directory / script_filename
 
+        # Download the script
         download_file(resource.file, file_path)
-        # Refresh the processing toolbox to show the new script
-        QgsApplication.processingRegistry().providerById("script").refreshAlgorithms()
-        self.show_success_message(
-            self.tr(f"Processing script {resource.name} is added to QGIS")
-        )
+        
+        # Try to refresh the algorithms to check for import errors
+        script_provider = QgsApplication.processingRegistry().providerById("script")
+        if script_provider:
+            # Before refreshing, get a list of existing algorithms
+            existing_algs = {alg.id() for alg in script_provider.algorithms()}
+            
+            script_provider.refreshAlgorithms()
+            
+            # Check if the script was loaded successfully by looking for the algorithm
+            script_name = Path(script_filename).stem
+            script_found = False
+            error_message = None
+            
+            # Get the new list of algorithms
+            new_algs = {alg.id() for alg in script_provider.algorithms()}
+            
+            # If there are no new algorithms and there was an error loading the script
+            if not (new_algs - existing_algs):
+                # Try to import the module to get the actual error
+                try:
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location(script_name, str(file_path))
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                except Exception as e:
+                    error_message = str(e)
+            
+            # Check if algorithm exists after refresh
+            for alg in script_provider.algorithms():
+                if script_name.lower() in alg.id().lower():
+                    script_found = True
+                    break
+            
+            if not script_found:
+                # If script wasn't loaded, show the actual error message
+                error_msg = f"Failed to load script {resource.name}. "
+                if error_message:
+                    error_msg += f"Error: {error_message}"
+                else:
+                    error_msg += "The script could not be loaded."
+                    
+                self.show_error_message(self.tr(error_msg))
+                # Delete the script file since it failed to load
+                file_path.unlink()
+                return
+                
+        self.show_success_message(self.tr(f"Processing script {resource.name} is added to QGIS"))
 
     def update_title_bar(self):
         num_total_resources = len(self.resources)
@@ -1027,6 +1065,19 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if category_name not in ResoureTypeCategories:
                 ResoureTypeCategories[category_name] = [new_type]
 
+    def get_type_display_name(self, resource_type):
+        """
+        Get a user-friendly display name for a resource type based on its category.
+        """
+        # Look through ResoureTypeCategories to find the category containing this type
+        for category_name, types in ResoureTypeCategories.items():
+            if resource_type in types:
+                # Return the category name as is
+                return category_name
+        
+        # If not found, return the resource type as is
+        return resource_type
+        
     def hide_property(self, label, labelContent):
         """Hide a property (label and its content) from the preview layout"""
         label.setVisible(False)
