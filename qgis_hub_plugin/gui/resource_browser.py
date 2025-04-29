@@ -420,7 +420,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Description
         self.labelName.setText(resource.name)
-        self.labelType.setText(resource.resource_type)
+        # Use a user-friendly display name for the resource type based on its category
+        display_type = self.get_type_display_name(resource.resource_type)
+        self.labelType.setText(display_type)
         self.labelSubtype.setVisible(bool(resource.resource_subtype))
         self.labelSubtypeLabel.setVisible(bool(resource.resource_subtype))
         if resource.resource_subtype:
@@ -1023,3 +1025,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             category_name = f"{new_type}s"  # Simple pluralization
             if category_name not in ResoureTypeCategories:
                 ResoureTypeCategories[category_name] = [new_type]
+
+    def get_type_display_name(self, resource_type):
+        """
+        Get a user-friendly display name for a resource type based on its category.
+        """
+        # Look through ResoureTypeCategories to find the category containing this type
+        for category_name, types in ResoureTypeCategories.items():
+            if resource_type in types:
+                # Return the category name as is
+                return category_name
+        
+        # If not found, return the resource type as is
+        return resource_type
