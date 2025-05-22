@@ -16,7 +16,7 @@ Unreleased
 
 -->
 
-## 0.4.0 - 2025-04-08
+## 0.4.0 - 2025-05-22
 
 ### Added
 - Added support for 'Map' and 'Processing Scripts' resource type
