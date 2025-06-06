@@ -699,69 +699,62 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         resource = self.selected_resource
         qgis_user_dir = QgsApplication.qgisSettingsDirPath()
 
-        # Download to qgis_hub subdirectory in the processing scripts folder
-        scripts_directory = Path(qgis_user_dir, "processing", "scripts", "qgis_hub")
-        if not scripts_directory.exists():
-            scripts_directory.mkdir(parents=True, exist_ok=True)
+        scripts_directory = Path(qgis_user_dir, "processing", "scripts")
+        scripts_directory.mkdir(parents=True, exist_ok=True)
 
-        # Make sure the script has .py extension
+        # Make sure the target name ends in .py
         script_filename = os.path.basename(resource.file)
         if not script_filename.endswith(".py"):
             script_filename += ".py"
-
         file_path = scripts_directory / script_filename
 
         # Download the script
         download_file(resource.file, file_path)
-        
-        # Try to refresh the algorithms to check for import errors
+
+        # Try to load / refresh the script provider
         script_provider = QgsApplication.processingRegistry().providerById("script")
         if script_provider:
-            # Before refreshing, get a list of existing algorithms
-            existing_algs = {alg.id() for alg in script_provider.algorithms()}
-            
+            before = {alg.id() for alg in script_provider.algorithms()}
             script_provider.refreshAlgorithms()
-            
-            # Check if the script was loaded successfully by looking for the algorithm
-            script_name = Path(script_filename).stem
-            script_found = False
-            error_message = None
-            
-            # Get the new list of algorithms
-            new_algs = {alg.id() for alg in script_provider.algorithms()}
-            
-            # If there are no new algorithms and there was an error loading the script
-            if not (new_algs - existing_algs):
-                # Try to import the module to get the actual error
+            after = {alg.id() for alg in script_provider.algorithms()}
+
+            # If no new algorithm shows up, do a manual import to reveal the traceback
+            if not (after - before):
                 try:
                     import importlib.util
-                    spec = importlib.util.spec_from_file_location(script_name, str(file_path))
+                    spec = importlib.util.spec_from_file_location(
+                        Path(file_path).stem, str(file_path)
+                    )
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
-                except Exception as e:
-                    error_message = str(e)
-            
-            # Check if algorithm exists after refresh
-            for alg in script_provider.algorithms():
-                if script_name.lower() in alg.id().lower():
-                    script_found = True
-                    break
-            
-            if not script_found:
-                # If script wasn't loaded, show the actual error message
-                error_msg = f"Failed to load script {resource.name}. "
-                if error_message:
-                    error_msg += f"Error: {error_message}"
+                except Exception as exc:          # noqa: BLE001
+                    self.show_error_message(
+                        self.tr(
+                            f"Script downloaded to {file_path}, "
+                            f"but QGIS could not load it:\n{exc}"
+                        )
+                    )
                 else:
-                    error_msg += "The script could not be loaded."
-                    
-                self.show_error_message(self.tr(error_msg))
-                # Delete the script file since it failed to load
-                file_path.unlink()
-                return
-                
-        self.show_success_message(self.tr(f"Processing script {resource.name} is added to QGIS"))
-
+                    # Script imported but provider still didn't pick it up
+                    self.show_warning_message(
+                        self.tr(
+                            f"Script saved to {file_path}, "
+                            "but no Processing algorithm was registered. "
+                            "Check that the script defines a correct QgsProcessingAlgorithm."
+                        )
+                    )
+            else:
+                self.show_success_message(
+                    self.tr(f"Processing script “{resource.name}” added to QGIS")
+                )
+        else:
+            self.show_warning_message(
+                self.tr(
+                    "Could not find the “script” provider – is the QGIS Python processing "
+                    "provider enabled?"
+                )
+            )
+   
     def update_title_bar(self):
         num_total_resources = len(self.resources)
         num_selected_resources = self.proxy_model.rowCount()
