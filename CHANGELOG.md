@@ -16,9 +16,16 @@ Unreleased
 
 -->
 
+## 0.4.1 - 2025-06-11
+
+### Fixed
+
+- Fixed bug when adding processing scripts to QGIS
+
 ## 0.4.0 - 2025-05-22
 
 ### Added
+
 - Added support for 'Map' and 'Processing Scripts' resource type
 - Implemented dynamic resource type handling for future-proof compatibility
 - Added resource subtype filtering with tree hierarchy view
@@ -26,6 +33,7 @@ Unreleased
 - Added close button to resource preview window
 
 ### Changed
+
 - Renamed resource type labels to match QGIS Hub Website
 - Enhanced UI with improved spacing and layout
 - Improved preview panel layout with consistent form spacing
