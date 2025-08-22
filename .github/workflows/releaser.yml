@@ -44,7 +44,7 @@ jobs:
       run: qgis-plugin-ci changelog ${GITHUB_REF/refs\/tags\//} >> release.md
 
     - name: Create release on GitHub
-      uses: ncipollo/release-action@v1.12.0
+      uses: ncipollo/release-action@v1.14.0
       with:
         bodyFile: release.md
         generateReleaseNotes: true
