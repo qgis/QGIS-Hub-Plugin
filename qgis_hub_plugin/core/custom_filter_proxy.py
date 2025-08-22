@@ -1,6 +1,6 @@
-from qgis.PyQt.QtCore import QSortFilterProxyModel, Qt
+from qgis.PyQt.QtCore import QSortFilterProxyModel
 
-from qgis_hub_plugin.gui.constants import ResourceTypeRole, SortingRole
+from qgis_hub_plugin.gui.constants import ResourceSubtypeRole, ResourceTypeRole, SortingRole
 from qgis_hub_plugin.toolbelt import PlgLogger
 
 
@@ -40,13 +40,30 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
 
         index = model.index(source_row, 0, source_parent)
         resource_type = model.data(index, ResourceTypeRole)
+        resource_subtype = model.data(index, ResourceSubtypeRole)
 
+        # Check if the resource type is enabled
         if not self.checkbox_states.get(resource_type, False):
             return False
-
+        
+        # Handle subtype filtering
+        if resource_subtype:
+            # Check if there's a specific filter for this type+subtype combination
+            subtype_key = f"{resource_type}:{resource_subtype}"
+            
+            # If we have a specific filter for this subtype and it's False, filter it out
+            if subtype_key in self.checkbox_states and not self.checkbox_states[subtype_key]:
+                return False
+        
+        # Text search filtering
         for role in self.roles_to_filter:
             data = model.data(index, role)
-            if self.filterRegExp().indexIn(data) != -1:
+            if data and self.filterRegExp().indexIn(str(data)) != -1:
                 return True
 
-        return False
+        # If we're filtering by roles and nothing matched, hide the item
+        if self.roles_to_filter:
+            return False
+        
+        # Default to showing the item if no other filters applied
+        return True

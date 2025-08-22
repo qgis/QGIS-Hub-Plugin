@@ -5,6 +5,7 @@ from qgis.PyQt.QtGui import QIcon, QStandardItem
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
     NameRole,
+    ResourceSubtypeRole,
     ResourceTypeRole,
     SortingRole,
 )
@@ -25,11 +26,12 @@ class ResourceItem(QStandardItem):
         self.upload_date = datetime.fromisoformat(upload_date_string)
         self.download_count = params.get("download_count")
         self.description = params.get("description")
+        self.dependencies = params.get("dependencies")  # Add support for dependencies
         self.file = params.get("file")
         self.thumbnail = params.get("thumbnail")
 
         # Custom attribute
-        self.setText(self.name)
+        self.setText(self.name[:50] + "..." if len(self.name) > 50 else self.name)
         self.setToolTip(f"{self.name} by {self.creator}")
         thumbnail_path = download_resource_thumbnail(self.thumbnail, self.uuid)
         if thumbnail_path:
@@ -40,6 +42,7 @@ class ResourceItem(QStandardItem):
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
         self.setData(self.creator, CreatorRole)
+        self.setData(self.resource_subtype, ResourceSubtypeRole)
 
 
 class AttributeSortingItem(QStandardItem):

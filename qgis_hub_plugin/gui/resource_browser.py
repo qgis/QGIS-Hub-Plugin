@@ -5,7 +5,14 @@ import zipfile
 from functools import partial
 from pathlib import Path
 
-from qgis.core import Qgis, QgsApplication, QgsProject, QgsStyle, QgsVectorLayer
+from qgis.core import (
+    Qgis,
+    QgsApplication,
+    QgsLayerDefinition,
+    QgsProject,
+    QgsStyle,
+    QgsVectorLayer,
+)
 from qgis.gui import QgsMessageBar
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import (
@@ -22,9 +29,11 @@ from qgis.PyQt.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFileDialog,
+    QFormLayout,
     QGraphicsPixmapItem,
     QGraphicsScene,
     QSizePolicy,
+    QTreeWidgetItem,
 )
 
 from qgis_hub_plugin.__about__ import __uri_homepage__
@@ -33,12 +42,19 @@ from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
     NameRole,
+    ResourceSubtypeRole,
     ResourceTypeRole,
     ResoureType,
+    ResoureTypeCategories,
 )
 from qgis_hub_plugin.gui.resource_item import AttributeSortingItem, ResourceItem
 from qgis_hub_plugin.toolbelt import PlgLogger, PlgOptionsManager
-from qgis_hub_plugin.utilities.common import download_file, download_resource_thumbnail
+from qgis_hub_plugin.utilities.common import (
+    QGIS_HUB_DIR,
+    download_file,
+    download_resource_thumbnail,
+)
+from qgis_hub_plugin.utilities.exception import DownloadError
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
 
 UI_CLASS = uic.loadUiType(
@@ -54,6 +70,14 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.iface = iface
         self.log = PlgLogger().log
         self.plg_settings = PlgOptionsManager()
+
+        # Connect the close preview button
+        self.closePreviewButton.clicked.connect(self.hide_preview)
+        self.closePreviewButton.setToolTip(self.tr("Close preview panel"))
+        # Set a larger font size for the close button
+        font = self.closePreviewButton.font()
+        font.setPointSize(14)
+        self.closePreviewButton.setFont(font)
 
         # Buttons
         self.listViewToolButton.setIcon(
@@ -74,12 +98,16 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Resources
         self.resources = []
         self.selected_resource = None
-        self.checkbox_states = {}
-        self.update_checkbox_states()
+        self.filter_states = {}
+        self.update_filter_states()
 
+        # Setup resource model and proxy model first
         self.resource_model = QStandardItemModel()
         self.proxy_model = MultiRoleFilterProxyModel()
         self.proxy_model.setSourceModel(self.resource_model)
+
+        # Now setup tree widget which depends on proxy_model
+        self.setup_resource_type_tree()
 
         self.listViewResources.setModel(self.proxy_model)
         self.treeViewResources.setModel(self.proxy_model)
@@ -129,10 +157,6 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             lambda: self.populate_resources(force_update=True)
         )
         self.buttonBox.rejected.connect(self.store_setting)
-
-        self.checkBoxGeopackage.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxStyle.stateChanged.connect(self.update_resource_filter)
-        self.checkBoxModel.stateChanged.connect(self.update_resource_filter)
 
         # Match with the size of the thumbnail
         self.iconSizeSlider.setMinimum(20)
@@ -205,6 +229,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     @show_busy_cursor
     def populate_resources(self, force_update=False):
+        self.log(f"Populating resources {force_update}")
         if force_update or not self.resources:
             response = get_all_resources(force_update=force_update)
 
@@ -213,6 +238,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 return
 
             self.resources = response.get("results", {})
+
+            # Check for new resource types that don't exist in constants.py
+            self.register_new_resource_types()
 
         self.resource_model.clear()
         self.resource_model.setHorizontalHeaderLabels(
@@ -231,40 +259,90 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if force_update:
             self.show_success_message("Successfully update the resources")
 
+        # Setup resource type tree after resources are loaded
+        self.setup_resource_type_tree()
+
         self.resize_columns()
         self.update_title_bar()
 
-    def update_checkbox_states(self):
-        geopackage_checked = self.checkBoxGeopackage.isChecked()
-        style_checked = self.checkBoxStyle.isChecked()
-        model_checked = self.checkBoxModel.isChecked()
+    def update_filter_states(self):
+        """
+        Create a dictionary with resource types and their filter states.
+        This method gets filter states from the tree selection.
+        Also handles filtering by subtypes when a subtype is selected.
+        """
+        selected_items = self.treeWidgetCategories.selectedItems()
+        selected_data = None
 
-        self.checkbox_states = {
-            ResoureType.Geopackage: geopackage_checked,
-            ResoureType.Style: style_checked,
-            ResoureType.Model: model_checked,
-        }
+        if selected_items:
+            selected_data = selected_items[0].data(0, Qt.UserRole)
+
+        # Default to all types selected if nothing is selected or "all" is selected
+        is_all_selected = not selected_data or selected_data == "all"
+
+        # Clear existing filter states
+        self.filter_states = {}
+
+        # Get all resource types from ResoureType class dynamically
+        for attr in dir(ResoureType):
+            if not attr.startswith("__") and isinstance(
+                getattr(ResoureType, attr), str
+            ):
+                resource_type = getattr(ResoureType, attr)
+
+                # If "All Types" is selected, or this type is in the selected category
+                if is_all_selected or (
+                    isinstance(selected_data, list) and resource_type in selected_data
+                ):
+                    self.filter_states[resource_type] = True
+                # If a specific subtype is selected (dictionary with type and subtype)
+                elif (
+                    isinstance(selected_data, dict)
+                    and selected_data.get("type") == resource_type
+                ):
+                    # This resource type is enabled, but we'll filter by subtype
+                    self.filter_states[resource_type] = True
+
+                    selected_subtype = selected_data.get("subtype")
+
+                    # Enable the specific subtype filter
+                    subtype_key = f"{resource_type}:{selected_subtype}"
+                    self.filter_states[subtype_key] = True
+
+                    # Now set other subtypes to False
+                    if self.resources:
+                        for resource in self.resources:
+                            if (
+                                resource.get("resource_type") == resource_type
+                                and resource.get("resource_subtype")
+                                and resource.get("resource_subtype") != selected_subtype
+                            ):
+                                # Create a key for this type+subtype combo and set it to False
+                                other_subtype_key = f"{resource_type}:{resource.get('resource_subtype')}"
+                                self.filter_states[other_subtype_key] = False
+                else:
+                    self.filter_states[resource_type] = False
 
     def update_resource_filter(self):
         current_text = self.lineEditSearch.text()
 
-        self.update_checkbox_states()
+        self.update_filter_states()
 
         filter_regexp_parts = ["NONE"]
-        for resource_type, checked in self.checkbox_states.items():
+        for resource_type, checked in self.filter_states.items():
             if checked:
                 filter_regexp_parts.append(resource_type)
 
         filter_regexp = QRegExp("|".join(filter_regexp_parts), Qt.CaseInsensitive)
         self.proxy_model.setFilterRegExp(filter_regexp)
         self.proxy_model.setRolesToFilter([ResourceTypeRole])
-        self.proxy_model.setCheckboxStates(self.checkbox_states)
+        self.proxy_model.setCheckboxStates(self.filter_states)
         self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
         self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
         self.proxy_model.setRolesToFilter([NameRole, CreatorRole])
-        self.proxy_model.setCheckboxStates(self.checkbox_states)
+        self.proxy_model.setCheckboxStates(self.filter_states)
 
         self.update_title_bar()
 
@@ -297,16 +375,23 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if self.selected_resource.resource_type == ResoureType.Model:
             self.addQGISPushButton.setText(self.tr("Add Model to QGIS"))
             self.addQGISPushButton.setToolTip(self.tr("Add the model to QGIS directly"))
+        elif self.selected_resource.resource_type == ResoureType.ProcessingScripts:
+            self.addQGISPushButton.setText(self.tr("Add Script to QGIS"))
+            self.addQGISPushButton.setToolTip(
+                self.tr("Add the processing script to QGIS directly")
+            )
         elif self.selected_resource.resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Add the style to QGIS style database")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Add the style to QGIS style database"))
         elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
-            self.addQGISPushButton.setToolTip(
-                self.tr("Download and load the layers to QGIS")
-            )
+            self.addQGISPushButton.setToolTip(self.tr("Download and load the layers to QGIS"))
+        elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
+            self.addQGISPushButton.setText(self.tr("Add Layer to QGIS"))
+            self.addQGISPushButton.setToolTip(self.tr("Load the layer definition to QGIS"))
+        elif self.selected_resource.resource_type == ResoureType.Map:
+            self.addQGISPushButton.setText(self.tr("View in Browser"))
+            self.addQGISPushButton.setToolTip(self.tr("Preview the map in your browser"))
         else:
             self.addQGISPushButton.setVisible(False)
 
@@ -329,15 +414,51 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Description
         self.labelName.setText(resource.name)
-        self.labelType.setText(resource.resource_type)
+        # Use a user-friendly display name for the resource type based on its category
+        display_type = self.get_type_display_name(resource.resource_type)
+        self.labelType.setText(display_type)
         self.labelSubtype.setVisible(bool(resource.resource_subtype))
         self.labelSubtypeLabel.setVisible(bool(resource.resource_subtype))
         if resource.resource_subtype:
+            self.show_property(
+                self.labelSubtypeLabel,
+                self.labelSubtype,
+                self.labelTypeLabel,
+            )
             self.labelSubtype.setText(resource.resource_subtype)
+        else:
+            self.hide_property(
+                self.labelSubtypeLabel,
+                self.labelSubtype,
+            )
         self.labelCreator.setText(resource.creator)
         self.labelDownloadCount.setText(str(resource.download_count))
         pretty_upload_date = resource.upload_date.strftime("%d %B %Y").lstrip("0")
         self.labelUploaded.setText(pretty_upload_date)
+
+        # Show dependencies if they exist (for Models and Processing Scripts)
+        if hasattr(self, "labelDependencies") and hasattr(
+            self, "labelDependenciesLabel"
+        ):
+            # Convert dependencies to boolean - check if it's not None and not empty
+            has_dependencies = (
+                resource.resource_type in [ResoureType.Model, ResoureType.ProcessingScripts]
+                and resource.dependencies is not None
+                and resource.dependencies != ""
+            )
+            if has_dependencies:
+                self.show_property(
+                    self.labelDependenciesLabel,
+                    self.labelDependencies,
+                    self.labelUploadedLabel,
+                )
+                self.labelDependencies.setText(resource.dependencies)
+            else:
+                self.hide_property(
+                    self.labelDependenciesLabel,
+                    self.labelDependencies,
+                )
+
         self.textBrowserDescription.setHtml(resource.description)
 
     def hide_preview(self):
@@ -371,11 +492,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if not file_path.endswith(file_extension):
                 file_path = file_path + file_extension
 
-            if not download_resource_file(resource.file, file_path):
-                self.show_warning_message(f"Download failed for {resource.name}")
-            else:
+            try:
+                download_file(resource.file, Path(file_path))
                 self.show_success_message(f"Downloaded {resource.name} to {file_path}")
-
                 if self.checkBoxOpenDirectory.isChecked():
                     QDesktopServices.openUrl(
                         QUrl.fromLocalFile(str(Path(file_path).parent))
@@ -384,14 +503,32 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 self.plg_settings.set_value_from_key(
                     "download_location", str(Path(file_path).parent)
                 )
+            except DownloadError as e:
+                self.show_error_message(str(e))
 
     def add_resource_to_qgis(self):
-        if self.selected_resource.resource_type == ResoureType.Model:
-            self.add_model_to_qgis()
-        elif self.selected_resource.resource_type == ResoureType.Style:
-            self.add_style_to_qgis()
-        elif self.selected_resource.resource_type == ResoureType.Geopackage:
-            self.add_geopackage_to_qgis()
+        try:
+            if self.selected_resource.resource_type == ResoureType.Model:
+                self.add_model_to_qgis()
+            elif self.selected_resource.resource_type == ResoureType.Style:
+                self.add_style_to_qgis()
+            elif self.selected_resource.resource_type == ResoureType.Geopackage:
+                self.add_geopackage_to_qgis()
+            elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
+                self.add_layer_definition_to_qgis()
+            elif self.selected_resource.resource_type == ResoureType.Map:
+                # For Map resources, preview in browser instead of adding to QGIS
+                map_url = self.selected_resource.file
+                QDesktopServices.openUrl(QUrl(map_url))
+                self.show_success_message(
+                    self.tr(
+                        f"Opening map {self.selected_resource.name} in your browser"
+                    )
+                )
+            elif self.selected_resource.resource_type == ResoureType.ProcessingScripts:
+                self.add_processing_script_to_qgis()
+        except DownloadError as e:
+            self.show_error_message(str(e))
 
     @show_busy_cursor
     def add_model_to_qgis(self):
@@ -403,23 +540,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         if not custom_model_directory.exists():
             custom_model_directory.mkdir(parents=True, exist_ok=True)
 
-        file_path = os.path.join(
-            custom_model_directory, os.path.basename(resource.file)
-        )
+        file_path = custom_model_directory / os.path.basename(resource.file)
 
-        if download_resource_file(resource.file, file_path):
-            # Refreshing the processing toolbox
-            QgsApplication.processingRegistry().providerById(
-                "model"
-            ).refreshAlgorithms()
-            self.show_success_message(
-                self.tr(f"Model {resource.name} is added to QGIS")
-            )
-
-        else:
-            self.show_warning_message(
-                self.tr(f"Download failed for model {resource.name}")
-            )
+        download_file(resource.file, file_path)
+        # Refreshing the processing toolbox
+        QgsApplication.processingRegistry().providerById("model").refreshAlgorithms()
+        self.show_success_message(self.tr(f"Model {resource.name} is added to QGIS"))
 
     @show_busy_cursor
     def add_geopackage_to_qgis(self):
@@ -442,9 +568,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if not file_path.endswith(file_extension):
                 file_path = file_path + file_extension
 
-            if not download_resource_file(resource.file, file_path):
-                self.show_error_message(self.tr(f"Download failed for {resource.name}"))
-                return
+            download_file(resource.file, file_path)
 
         extract_location = Path(os.path.dirname(file_path))
         current_project = QgsProject.instance()
@@ -526,7 +650,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             "/tmp" if platform.system() == "Darwin" else tempfile.gettempdir()
         )
         tempfile_path = Path(tempdir, resource.file.split("/")[-1])
-        download_resource_file(resource.file, tempfile_path, True)
+        download_file(resource.file, tempfile_path, True)
 
         # Add to QGIS style library
         style = QgsStyle().defaultStyle()
@@ -540,6 +664,97 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 self.tr(f"Style {resource.name} is not added to QGIS")
             )
 
+    @show_busy_cursor
+    def add_layer_definition_to_qgis(self):
+        resource = self.selected_resource
+
+        layer_definition_dir = QGIS_HUB_DIR / "layer_definitions"
+        file_path = layer_definition_dir / f"{resource.name}.qlr"
+
+        if not layer_definition_dir.exists():
+            layer_definition_dir.mkdir(parents=True, exist_ok=True)
+
+        download_file(resource.file, file_path)
+
+        current_project = QgsProject.instance()
+
+        self.load_layer_definition(current_project, resource.name, file_path)
+
+    def load_layer_definition(self, project, layer_name, layer_definition_file_path):
+        success, message = QgsLayerDefinition.loadLayerDefinition(
+            str(layer_definition_file_path), project, project.layerTreeRoot()
+        )
+        if success:
+            self.show_success_message(
+                self.tr(f"Successfully load layer definition: {layer_name}")
+            )
+        else:
+            self.show_error_message(
+                self.tr(f"Failed to load layer definition: {layer_name}: {message}")
+            )
+
+    @show_busy_cursor
+    def add_processing_script_to_qgis(self):
+        """Add a processing script to QGIS processing scripts folder."""
+        resource = self.selected_resource
+        qgis_user_dir = QgsApplication.qgisSettingsDirPath()
+
+        scripts_directory = Path(qgis_user_dir, "processing", "scripts")
+        scripts_directory.mkdir(parents=True, exist_ok=True)
+
+        # Make sure the target name ends in .py
+        script_filename = os.path.basename(resource.file)
+        if not script_filename.endswith(".py"):
+            script_filename += ".py"
+        file_path = scripts_directory / script_filename
+
+        # Download the script
+        download_file(resource.file, file_path)
+
+        # Try to load / refresh the script provider
+        script_provider = QgsApplication.processingRegistry().providerById("script")
+        if script_provider:
+            before = {alg.id() for alg in script_provider.algorithms()}
+            script_provider.refreshAlgorithms()
+            after = {alg.id() for alg in script_provider.algorithms()}
+
+            # If no new algorithm shows up, do a manual import to reveal the traceback
+            if not (after - before):
+                try:
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location(
+                        Path(file_path).stem, str(file_path)
+                    )
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                except Exception as exc:          # noqa: BLE001
+                    self.show_error_message(
+                        self.tr(
+                            f"Script downloaded to {file_path}, "
+                            f"but QGIS could not load it:\n{exc}"
+                        )
+                    )
+                else:
+                    # Script imported but provider still didn't pick it up
+                    self.show_warning_message(
+                        self.tr(
+                            f"Script saved to {file_path}, "
+                            "but no Processing algorithm was registered. "
+                            "Check that the script defines a correct QgsProcessingAlgorithm."
+                        )
+                    )
+            else:
+                self.show_success_message(
+                    self.tr(f"Processing script “{resource.name}” added to QGIS")
+                )
+        else:
+            self.show_warning_message(
+                self.tr(
+                    "Could not find the “script” provider – is the QGIS Python processing "
+                    "provider enabled?"
+                )
+            )
+   
     def update_title_bar(self):
         num_total_resources = len(self.resources)
         num_selected_resources = self.proxy_model.rowCount()
@@ -560,6 +775,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Show the list view
         self.viewStackedWidget.setCurrentIndex(1)
 
+        # Hide the icon size slider since it's not relevant for list view
+        self.iconSizeSlider.setVisible(False)
+
     def show_icon_view(self):
         # Update the selected on other view
         selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
@@ -572,6 +790,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Show the icon (grid) view
         self.viewStackedWidget.setCurrentIndex(0)
 
+        # Show the icon size slider since it's relevant for icon view
+        self.iconSizeSlider.setVisible(True)
+
     def resize_columns(self):
         if self.resource_model.rowCount() > 0:
             for i in range(self.resource_model.columnCount()):
@@ -580,12 +801,303 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def update_icon_size(self, size):
         self.listViewResources.setIconSize(QSize(size, size))
 
+    def setup_resource_type_tree(self):
+        """
+        Setup the resource type tree widget with available resource types.
+        The tree will have a main "Resource Types" item with child items for each resource type.
+        Resource subtypes will be shown as children of their type.
+        """
+        # Clear the tree widget
+        self.treeWidgetCategories.clear()
 
-# TODO: do it QGIS task to have
-def download_resource_file(url: str, file_path: str, force: bool = False):
-    resource_path = Path(file_path)
-    download_file(url, resource_path, force)
-    if resource_path.exists():
-        return resource_path
-    else:
-        return None
+        # Create the root item
+        self.treeWidgetCategories.invisibleRootItem()
+
+        self.tree_items = {}
+
+        # Add the "All Types" root item with total count
+        total_resources = len(self.resources) if self.resources else 0
+        all_types_item = QTreeWidgetItem(
+            self.treeWidgetCategories, [f"All Types ({total_resources})"]
+        )
+        all_types_item.setData(0, Qt.UserRole, "all")
+        all_types_item.setExpanded(True)
+        # Make "All Types" bold
+        font = all_types_item.font(0)
+        font.setBold(True)
+        all_types_item.setFont(0, font)
+
+        # Get the list of known types from the ResoureTypeCategories
+        # to keep it consistent with our filter states
+        known_types = []
+        for types in ResoureTypeCategories.values():
+            for resource_type in types:
+                known_types.append(resource_type)
+
+        # Check if we have any unknown resource types in the resources
+        unknown_resource_types = {}
+        if self.resources:
+            for resource in self.resources:
+                resource_type = resource.get("resource_type")
+                if resource_type and resource_type not in known_types:
+                    if resource_type not in unknown_resource_types:
+                        unknown_resource_types[resource_type] = 0
+                    unknown_resource_types[resource_type] += 1
+
+        # Add categories as children - now using the constant from constants.py
+        for category_name, types in ResoureTypeCategories.items():
+            # Count resources in this category
+            category_count = 0
+            if self.resources:
+                category_count = sum(
+                    1
+                    for resource in self.resources
+                    if resource.get("resource_type") in types
+                )
+
+            # Only show categories that have resources
+            if category_count > 0:
+                category_item = QTreeWidgetItem(
+                    all_types_item, [f"{category_name} ({category_count})"]
+                )
+                category_item.setData(0, Qt.UserRole, types)
+                # Make category names bold
+                font = category_item.font(0)
+                font.setBold(True)
+                category_item.setFont(0, font)
+                self.tree_items[category_name] = category_item
+
+                # Collect subtypes for this category
+                if self.resources:
+                    subtypes_dict = {}
+                    # First pass - collect all subtypes and their counts
+                    for resource in self.resources:
+                        resource_type = resource.get("resource_type")
+                        resource_subtype = resource.get("resource_subtype")
+
+                        # If the resource type belongs to this category and has a subtype
+                        if resource_type in types and resource_subtype:
+                            if resource_subtype not in subtypes_dict:
+                                subtypes_dict[resource_subtype] = 0
+                            subtypes_dict[resource_subtype] += 1
+
+                    # Second pass - add subtype items to the tree
+                    for subtype, count in subtypes_dict.items():
+                        subtype_label = f"{subtype} ({count})"
+                        subtype_item = QTreeWidgetItem(category_item, [subtype_label])
+
+                        # Store the resource type and subtype for filtering
+                        subtype_data = {
+                            "type": types[
+                                0
+                            ],  # Assuming one type per category for simplicity
+                            "subtype": subtype,
+                        }
+                        subtype_item.setData(0, Qt.UserRole, subtype_data)
+
+                        # Add the subtype to the tree_items dictionary for later reference
+                        self.tree_items[f"{category_name}:{subtype}"] = subtype_item
+
+        # Add dynamic categories for any new resource types found
+        for unknown_type, count in unknown_resource_types.items():
+            # Create a user-friendly category name (simple pluralization)
+            category_name = f"{unknown_type}s"
+            category_item = QTreeWidgetItem(
+                all_types_item, [f"{category_name} ({count})"]
+            )
+            category_item.setData(0, Qt.UserRole, [unknown_type])
+            # Make dynamic category names bold
+            font = category_item.font(0)
+            font.setBold(True)
+            category_item.setFont(0, font)
+            self.tree_items[category_name] = category_item
+
+            # Also add subtypes for unknown types
+            if self.resources:
+                subtypes_dict = {}
+                # Collect all subtypes and their counts
+                for resource in self.resources:
+                    resource_type = resource.get("resource_type")
+                    resource_subtype = resource.get("resource_subtype")
+
+                    # If this resource is of the unknown type and has a subtype
+                    if resource_type == unknown_type and resource_subtype:
+                        if resource_subtype not in subtypes_dict:
+                            subtypes_dict[resource_subtype] = 0
+                        subtypes_dict[resource_subtype] += 1
+
+                # Add subtype items to the tree
+                for subtype, count in subtypes_dict.items():
+                    subtype_label = f"{subtype} ({count})"
+                    subtype_item = QTreeWidgetItem(category_item, [subtype_label])
+
+                    # Store the resource type and subtype for filtering
+                    subtype_data = {"type": unknown_type, "subtype": subtype}
+                    subtype_item.setData(0, Qt.UserRole, subtype_data)
+
+                    # Add the subtype to the tree_items dictionary
+                    self.tree_items[f"{category_name}:{subtype}"] = subtype_item
+
+        # Connect the selection changed signal
+        self.treeWidgetCategories.itemSelectionChanged.connect(
+            self.on_tree_selection_changed
+        )
+
+        # Select the "All Types" item by default
+        self.treeWidgetCategories.setCurrentItem(all_types_item)
+
+        # Resize the tree widget to fit the content
+        self.resize_tree_widget()
+
+    def on_tree_selection_changed(self):
+        """
+        Handle the selection change in the tree widget.
+        Update the resource filter accordingly.
+        """
+        # Update the checkbox states dictionary (which is now just for filtering logic)
+        self.update_filter_states()
+
+        # Update the resource filter based on tree selection
+        self.update_resource_filter()
+
+    def resize_tree_widget(self):
+        """
+        Resize the tree widget to fit its content without extra blank space.
+        This adjusts the width of the categories tree based on the content.
+        """
+        if not self.treeWidgetCategories.topLevelItemCount():
+            return
+
+        # Start with a larger base margin to prevent truncation
+        max_width = 50
+        font_metrics = self.treeWidgetCategories.fontMetrics()
+
+        # Check the width needed for each item including nested child items
+        for i in range(self.treeWidgetCategories.topLevelItemCount()):
+            top_item = self.treeWidgetCategories.topLevelItem(i)
+
+            # Get width of top-level item
+            text_width = font_metrics.horizontalAdvance(top_item.text(0))
+            max_width = max(max_width, text_width)
+
+            # Process category items (first level)
+            for j in range(top_item.childCount()):
+                category_item = top_item.child(j)
+                # Add indentation for first level
+                category_text_width = (
+                    font_metrics.horizontalAdvance(category_item.text(0)) + 30
+                )
+                max_width = max(max_width, category_text_width)
+
+                # Process subtype items (second level) - these often have longer names with counts
+                for k in range(category_item.childCount()):
+                    subtype_item = category_item.child(k)
+                    # Add extra indentation for second level items
+                    subtype_text_width = (
+                        font_metrics.horizontalAdvance(subtype_item.text(0)) + 60
+                    )
+                    max_width = max(max_width, subtype_text_width)
+
+        # Add more generous padding for better appearance and to ensure no truncation
+        max_width += 60
+
+        # Ensure the width isn't too small
+        max_width = max(max_width, 180)  # Increased minimum width
+
+        # Expand all items to make subtype items visible
+        self.treeWidgetCategories.expandAll()
+
+        # Set the width for the category section
+        self.widget_category_section.setMinimumWidth(max_width)
+
+        # Set initial width of the QSplitter at the optimal size
+        sizes = self.splitter_categories_resources.sizes()
+        if sizes:
+            # Calculate the total width of the splitter
+            total_width = sum(sizes)
+            # Set initial positions - give the category section its optimal width
+            self.splitter_categories_resources.setSizes(
+                [max_width, total_width - max_width]
+            )
+
+    def register_new_resource_types(self):
+        """
+        Dynamically register new resource types found in the API response.
+        This allows the plugin to handle new resource types without code changes.
+        """
+        if not self.resources:
+            return
+
+        # Get existing resource types from ResoureType class
+        existing_types = {
+            getattr(ResoureType, attr)
+            for attr in dir(ResoureType)
+            if not attr.startswith("__") and isinstance(getattr(ResoureType, attr), str)
+        }
+
+        # Find new resource types in the API response
+        new_types = set()
+        for resource in self.resources:
+            resource_type = resource.get("resource_type")
+            if resource_type and resource_type not in existing_types:
+                new_types.add(resource_type)
+
+        # Add new resource types to both the ResoureType class and ResoureTypeCategories
+        for new_type in new_types:
+            # Create a clean attribute name from the resource type
+            # Remove spaces and special characters
+            attr_name = "".join(c for c in new_type if c.isalnum())
+
+            # Add to ResoureType class if not already there
+            if not hasattr(ResoureType, attr_name):
+                setattr(ResoureType, attr_name, new_type)
+
+            # Create a new category for this type in ResoureTypeCategories
+            # Use the original name with proper spacing for display
+            category_name = f"{new_type}s"  # Simple pluralization
+            if category_name not in ResoureTypeCategories:
+                ResoureTypeCategories[category_name] = [new_type]
+
+    def get_type_display_name(self, resource_type):
+        """
+        Get a user-friendly display name for a resource type based on its category.
+        """
+        # Look through ResoureTypeCategories to find the category containing this type
+        for category_name, types in ResoureTypeCategories.items():
+            if resource_type in types:
+                # Return the category name as is
+                return category_name
+        
+        # If not found, return the resource type as is
+        return resource_type
+        
+    def hide_property(self, label, labelContent):
+        """Hide a property (label and its content) from the preview layout"""
+        label.setVisible(False)
+        labelContent.setVisible(False)
+        self.groupBoxPreview.layout().removeWidget(label)
+        self.groupBoxPreview.layout().removeWidget(labelContent)
+
+    def show_property(self, label, labelContent, previousLabel):
+        """Show a property (label and its content) from the preview layout after previousLabel
+
+        This function is used to show a label and its label content after a specific label
+        in the layout. This is useful for dynamically showing/hiding labels based on conditions.
+        The function finds the row of the specified label and inserts the new label and content
+        after it.
+        """
+        layout = self.groupBoxPreview.layout()
+        # Find the row for the previousLabel in the layout
+        row = -1  # Default to -1 if the label is not found
+        for i in range(layout.rowCount()):
+            layoutItem_label = layout.itemAt(i, QFormLayout.LabelRole)
+            if not layoutItem_label:
+                continue
+            label_widget = layout.itemAt(i, QFormLayout.LabelRole).widget()
+            if label_widget == previousLabel:
+                row = i
+                break
+
+        label.setVisible(True)
+        labelContent.setVisible(True)
+        layout.insertRow(row + 1, label, labelContent)

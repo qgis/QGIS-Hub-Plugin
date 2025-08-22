@@ -23,7 +23,7 @@
 Features:
 
 1. Search by resource's name or creator
-2. Filter by resource type
+2. Filter by resource type or subtype
 3. Resource shown as grid or list:
 
    - On the grid view, the thumbnail can be resized
@@ -38,7 +38,11 @@ Features:
 
    - Style will be added to your style manager
    - Model will be added to your profile model directory and shown directly on your QGIS
-   - Geopackage will be downloaded on your disk and loaded directly
+   - Project will be downloaded on your disk and loaded directly
+   - 3D Model has no option to add to QGIS directly (you can still download it and use it from 3D style panel)
+   - QLR or Layer Definition will be loaded directly
+   - Map will be shown in browser
+   - Processing Scrip will be added to processing list and shown directly on your QGIS
 
 10. Download the resource on your disk (without adding to QGIS)
 11. Open this help page
