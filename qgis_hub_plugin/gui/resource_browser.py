@@ -382,16 +382,32 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             )
         elif self.selected_resource.resource_type == ResoureType.Style:
             self.addQGISPushButton.setText(self.tr("Add Style to QGIS"))
-            self.addQGISPushButton.setToolTip(self.tr("Add the style to QGIS style database"))
+            self.addQGISPushButton.setToolTip(
+                self.tr("Add the style to QGIS style database")
+            )
         elif self.selected_resource.resource_type == ResoureType.Geopackage:
             self.addQGISPushButton.setText(self.tr("Add Geopackage to QGIS"))
-            self.addQGISPushButton.setToolTip(self.tr("Download and load the layers to QGIS"))
+            self.addQGISPushButton.setToolTip(
+                self.tr("Download and load the layers to QGIS")
+            )
         elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
             self.addQGISPushButton.setText(self.tr("Add Layer to QGIS"))
-            self.addQGISPushButton.setToolTip(self.tr("Load the layer definition to QGIS"))
-        elif self.selected_resource.resource_type == ResoureType.Map:
+            self.addQGISPushButton.setToolTip(
+                self.tr("Load the layer definition to QGIS")
+            )
+        elif self.selected_resource.resource_type in [
+            ResoureType.Map,
+            ResoureType.Screenshot,
+        ]:
             self.addQGISPushButton.setText(self.tr("View in Browser"))
-            self.addQGISPushButton.setToolTip(self.tr("Preview the map in your browser"))
+            resource_type = (
+                "map"
+                if self.selected_resource.resource_type == ResoureType.Map
+                else "screenshot"
+            )
+            self.addQGISPushButton.setToolTip(
+                self.tr(f"Preview the {resource_type} in your browser")
+            )
         else:
             self.addQGISPushButton.setVisible(False)
 
@@ -442,7 +458,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         ):
             # Convert dependencies to boolean - check if it's not None and not empty
             has_dependencies = (
-                resource.resource_type in [ResoureType.Model, ResoureType.ProcessingScripts]
+                resource.resource_type
+                in [ResoureType.Model, ResoureType.ProcessingScripts]
                 and resource.dependencies is not None
                 and resource.dependencies != ""
             )
@@ -516,13 +533,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 self.add_geopackage_to_qgis()
             elif self.selected_resource.resource_type == ResoureType.LayerDefinition:
                 self.add_layer_definition_to_qgis()
-            elif self.selected_resource.resource_type == ResoureType.Map:
-                # For Map resources, preview in browser instead of adding to QGIS
-                map_url = self.selected_resource.file
-                QDesktopServices.openUrl(QUrl(map_url))
+            elif self.selected_resource.resource_type in [
+                ResoureType.Map,
+                ResoureType.Screenshot,
+            ]:
+                # For Map/Screenshot resources, preview in browser instead of adding to QGIS
+                url = self.selected_resource.file
+                QDesktopServices.openUrl(QUrl(url))
+                resource_type = (
+                    "map"
+                    if self.selected_resource.resource_type == ResoureType.Map
+                    else "screenshot"
+                )
                 self.show_success_message(
                     self.tr(
-                        f"Opening map {self.selected_resource.name} in your browser"
+                        f"Opening {resource_type} {self.selected_resource.name} in your browser"
                     )
                 )
             elif self.selected_resource.resource_type == ResoureType.ProcessingScripts:
@@ -722,12 +747,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if not (after - before):
                 try:
                     import importlib.util
+
                     spec = importlib.util.spec_from_file_location(
                         Path(file_path).stem, str(file_path)
                     )
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
-                except Exception as exc:          # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001
                     self.show_error_message(
                         self.tr(
                             f"Script downloaded to {file_path}, "
@@ -754,7 +780,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     "provider enabled?"
                 )
             )
-   
+
     def update_title_bar(self):
         num_total_resources = len(self.resources)
         num_selected_resources = self.proxy_model.rowCount()
@@ -1067,10 +1093,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if resource_type in types:
                 # Return the category name as is
                 return category_name
-        
+
         # If not found, return the resource type as is
         return resource_type
-        
+
     def hide_property(self, label, labelContent):
         """Hide a property (label and its content) from the preview layout"""
         label.setVisible(False)
