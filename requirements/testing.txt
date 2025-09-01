@@ -1,7 +1,7 @@
 # Testing dependencies
 # --------------------
 
-pytest-cov>=3,<5
+pytest-cov>=3,<7
 packaging>=23
 
 requests>=2.25.1
