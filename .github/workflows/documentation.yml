@@ -46,7 +46,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache Sphinx cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: docs/_build/cache
           key: ${{ runner.os }}-sphinx-${{ hashFiles('docs/**/*') }}
