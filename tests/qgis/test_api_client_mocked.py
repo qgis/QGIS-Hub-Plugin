@@ -10,9 +10,9 @@ Usage from the repo root folder:
 
     .. code-block:: bash
         # for whole test module
-        pytest tests/unit/test_api_client_mocked.py -v
+        pytest tests/qgis/test_api_client_mocked.py -v
         # for specific test
-        pytest tests/unit/test_api_client_mocked.py::TestApiClientMocked::test_get_all_resources_with_cache -v
+        pytest tests/qgis/test_api_client_mocked.py::TestApiClientMocked::test_get_all_resources_with_cache -v
 """
 
 import json

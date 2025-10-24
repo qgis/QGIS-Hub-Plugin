@@ -229,10 +229,10 @@ pytest tests/unit/ -v
 pytest tests/unit/ --cov=qgis_hub_plugin --cov-report=html --cov-report=term
 
 # Run specific test file
-pytest tests/unit/test_api_client_mocked.py -v
+pytest tests/qgis/test_api_client_mocked.py -v
 
 # Run specific test
-pytest tests/unit/test_api_client_mocked.py::TestApiClientMocked::test_get_all_resources_with_cache -v
+pytest tests/qgis/test_api_client_mocked.py::TestApiClientMocked::test_get_all_resources_with_cache -v
 
 # Run QGIS tests (requires QGIS, ~8-10 seconds)
 pytest tests/qgis/ -v

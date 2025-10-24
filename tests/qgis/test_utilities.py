@@ -10,9 +10,9 @@ Usage from the repo root folder:
 
     .. code-block:: bash
         # for whole test module
-        pytest tests/unit/test_utilities.py -v
+        pytest tests/qgis/test_utilities.py -v
         # for specific test
-        pytest tests/unit/test_utilities.py::TestDownloadUtilities::test_download_file_success -v
+        pytest tests/qgis/test_utilities.py::TestDownloadUtilities::test_download_file_success -v
 """
 
 import unittest

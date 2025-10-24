@@ -97,7 +97,7 @@ pytest tests/unit/ -v
 pytest tests/unit/ --cov=qgis_hub_plugin --cov-report=html --cov-report=term
 
 # Run specific test file
-pytest tests/unit/test_api_client_mocked.py -v
+pytest tests/qgis/test_api_client_mocked.py -v
 
 # Run QGIS integration tests (requires QGIS environment)
 pytest tests/qgis/ -v

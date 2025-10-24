@@ -51,10 +51,10 @@ pytest tests/unit/ -v
 pytest tests/unit/ --cov=qgis_hub_plugin --cov-report=html --cov-report=term
 
 # Run specific test file
-pytest tests/unit/test_api_client_mocked.py -v
+pytest tests/qgis/test_api_client_mocked.py -v
 
 # Run specific test
-pytest tests/unit/test_api_client_mocked.py::TestApiClientMocked::test_get_all_resources_with_cache -v
+pytest tests/qgis/test_api_client_mocked.py::TestApiClientMocked::test_get_all_resources_with_cache -v
 
 # Run QGIS integration tests (requires QGIS, ~8-10 seconds)
 pytest tests/qgis/ -v
@@ -70,12 +70,12 @@ pytest tests/ -v -m "not qgis"
 This is normal! See [TESTING_GUIDE.md](TESTING_GUIDE.md) for troubleshooting.
 
 **Test Structure:**
-- `tests/unit/` - Unit tests without QGIS dependencies (use mocks)
+- `tests/unit/` - Lightweight tests without QGIS (2 tests)
+  - `test_plg_metadata.py` - Metadata parsing
+- `tests/qgis/` - All QGIS-dependent tests (71 tests)
   - `test_api_client_mocked.py` - API client with mocked network calls
   - `test_resource_item.py` - ResourceItem creation and data roles
   - `test_utilities.py` - Download functions and utilities
-  - `test_plg_metadata.py` - Metadata parsing
-- `tests/qgis/` - Integration tests requiring QGIS
   - `test_filter_proxy.py` - MultiRoleFilterProxyModel filtering/sorting
   - `test_integration.py` - End-to-end workflows
   - `test_api_client.py` - API client (original, makes real calls)
