@@ -207,6 +207,9 @@ A complete test framework has been created with:
 ```bash
 # Install test dependencies
 pip install -r requirements/testing.txt
+
+# For QGIS tests, ensure QGIS is installed
+python -c "from qgis.core import QgsApplication; print('QGIS OK')"
 ```
 
 This installs:
@@ -219,7 +222,7 @@ This installs:
 ### Test Commands
 
 ```bash
-# Run all unit tests (fast, no QGIS)
+# Run all unit tests (fast, no QGIS, < 1 second)
 pytest tests/unit/ -v
 
 # Run with coverage report
@@ -231,12 +234,18 @@ pytest tests/unit/test_api_client_mocked.py -v
 # Run specific test
 pytest tests/unit/test_api_client_mocked.py::TestApiClientMocked::test_get_all_resources_with_cache -v
 
-# Run QGIS tests (requires QGIS environment)
+# Run QGIS tests (requires QGIS, ~8-10 seconds)
 pytest tests/qgis/ -v
 
 # Run all tests
 pytest tests/ -v
+
+# Skip QGIS tests
+pytest tests/ -v -m "not qgis"
 ```
+
+**Important:** Integration tests take 8-10 seconds to run because they need to initialize QGIS.
+This is normal! See [TESTING_GUIDE.md](TESTING_GUIDE.md) for details and troubleshooting.
 
 ### CI/CD Integration
 

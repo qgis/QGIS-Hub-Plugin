@@ -44,7 +44,7 @@ flake8 qgis_hub_plugin/ --count --statistics
 ### Testing
 
 ```bash
-# Run unit tests only (fast, no QGIS dependencies)
+# Run unit tests only (fast, no QGIS dependencies, < 1 second)
 pytest tests/unit/ -v
 
 # Run unit tests with coverage report
@@ -56,12 +56,18 @@ pytest tests/unit/test_api_client_mocked.py -v
 # Run specific test
 pytest tests/unit/test_api_client_mocked.py::TestApiClientMocked::test_get_all_resources_with_cache -v
 
-# Run QGIS-specific tests (requires QGIS environment)
+# Run QGIS integration tests (requires QGIS, ~8-10 seconds)
 pytest tests/qgis/ -v
 
 # Run all tests
 pytest tests/ -v
+
+# Skip QGIS tests (unit tests only)
+pytest tests/ -v -m "not qgis"
 ```
+
+**Note:** Integration tests require QGIS and take ~8-10 seconds due to QGIS initialization.
+This is normal! See [TESTING_GUIDE.md](TESTING_GUIDE.md) for troubleshooting.
 
 **Test Structure:**
 - `tests/unit/` - Unit tests without QGIS dependencies (use mocks)

@@ -27,7 +27,7 @@ start_app()
 class TestIntegration(unittest.TestCase):
     """Integration tests for complete workflows."""
 
-    @patch("qgis_hub_plugin.core.api_client.get_all_resources")
+    @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
     @patch("qgis_hub_plugin.gui.resource_browser.download_resource_thumbnail")
     def test_full_resource_load_workflow(self, mock_thumbnail, mock_api):
         """Test complete workflow from API to GUI display."""
@@ -91,13 +91,13 @@ class TestIntegration(unittest.TestCase):
         mock_api.assert_called()
 
         # Verify resources were loaded into model
-        self.assertGreater(dialog.model.rowCount(), 0)
-        self.assertEqual(dialog.model.rowCount(), 3)
+        self.assertGreater(dialog.resource_model.rowCount(), 0)
+        self.assertEqual(dialog.resource_model.rowCount(), 3)
 
         # Verify resource types are diverse
         resource_types = set()
-        for row in range(dialog.model.rowCount()):
-            item = dialog.model.item(row, 0)
+        for row in range(dialog.resource_model.rowCount()):
+            item = dialog.resource_model.item(row, 0)
             from qgis_hub_plugin.gui.constants import ResourceTypeRole
 
             resource_type = item.data(ResourceTypeRole)
@@ -107,7 +107,7 @@ class TestIntegration(unittest.TestCase):
         self.assertIn("style", resource_types)
         self.assertIn("processingscript", resource_types)
 
-    @patch("qgis_hub_plugin.core.api_client.get_all_resources")
+    @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
     @patch("qgis_hub_plugin.gui.resource_browser.download_resource_thumbnail")
     def test_resource_browser_with_empty_response(self, mock_thumbnail, mock_api):
         """Test resource browser handles empty API response."""
@@ -122,9 +122,9 @@ class TestIntegration(unittest.TestCase):
         dialog = ResourceBrowserDialog()
 
         # Verify model is empty
-        self.assertEqual(dialog.model.rowCount(), 0)
+        self.assertEqual(dialog.resource_model.rowCount(), 0)
 
-    @patch("qgis_hub_plugin.core.api_client.get_all_resources")
+    @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
     @patch("qgis_hub_plugin.gui.resource_browser.download_resource_thumbnail")
     def test_resource_filtering_integration(self, mock_thumbnail, mock_api):
         """Test that filtering works with loaded resources."""
@@ -161,7 +161,7 @@ class TestIntegration(unittest.TestCase):
         dialog = ResourceBrowserDialog()
 
         # Verify all resources loaded
-        self.assertEqual(dialog.model.rowCount(), 4)
+        self.assertEqual(dialog.resource_model.rowCount(), 4)
 
         # Apply filter to show only models
         from qgis_hub_plugin.gui.constants import NameRole
@@ -172,7 +172,7 @@ class TestIntegration(unittest.TestCase):
         # Verify only 2 models are shown
         self.assertEqual(dialog.proxy_model.rowCount(), 2)
 
-    @patch("qgis_hub_plugin.core.api_client.get_all_resources")
+    @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
     def test_resource_browser_handles_api_failure(self, mock_api):
         """Test that resource browser handles API failure gracefully."""
         from qgis_hub_plugin.gui.resource_browser import ResourceBrowserDialog
@@ -184,11 +184,11 @@ class TestIntegration(unittest.TestCase):
         try:
             dialog = ResourceBrowserDialog()
             # If API returns None, model should be empty
-            self.assertEqual(dialog.model.rowCount(), 0)
+            self.assertEqual(dialog.resource_model.rowCount(), 0)
         except Exception as e:
             self.fail(f"Dialog creation failed with API error: {e}")
 
-    @patch("qgis_hub_plugin.core.api_client.get_all_resources")
+    @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
     @patch("qgis_hub_plugin.gui.resource_browser.download_resource_thumbnail")
     def test_resource_with_dependencies(self, mock_thumbnail, mock_api):
         """Test that resources with dependencies are loaded correctly."""
@@ -222,10 +222,10 @@ class TestIntegration(unittest.TestCase):
         dialog = ResourceBrowserDialog()
 
         # Verify resource loaded
-        self.assertEqual(dialog.model.rowCount(), 1)
+        self.assertEqual(dialog.resource_model.rowCount(), 1)
 
         # Get the resource item
-        item = dialog.model.item(0, 0)
+        item = dialog.resource_model.item(0, 0)
 
         # Verify dependencies
         self.assertIsNotNone(item.dependencies)
