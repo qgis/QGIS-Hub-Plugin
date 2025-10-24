@@ -1,11 +1,7 @@
 import json
 from pathlib import Path
 
-# Conditional QGIS import for testing without QGIS
-try:
-    from qgis.core import QgsApplication
-except ImportError:
-    QgsApplication = None
+from qgis.core import QgsApplication
 
 from qgis_hub_plugin.utilities.common import download_file
 

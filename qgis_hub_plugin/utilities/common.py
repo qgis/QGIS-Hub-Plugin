@@ -2,40 +2,16 @@ import os
 from pathlib import Path
 from typing import Optional
 
-# Conditional QGIS imports for testing without QGIS
-try:
-    from qgis.core import (
-        QgsApplication,
-        QgsNetworkAccessManager,
-        QgsNetworkReplyContent,
-    )
-    from qgis.PyQt.QtCore import QFile, QIODevice, QUrl
-    from qgis.PyQt.QtGui import QIcon
-    from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
-
-    QGIS_AVAILABLE = True
-except ImportError:
-    # Mock classes for testing without QGIS
-    QgsApplication = None
-    QgsNetworkAccessManager = None
-    QgsNetworkReplyContent = None
-    QFile = None
-    QIODevice = None
-    QUrl = None
-    QIcon = None
-    QNetworkReply = None
-    QNetworkRequest = None
-    QGIS_AVAILABLE = False
+from qgis.core import QgsApplication, QgsNetworkAccessManager, QgsNetworkReplyContent
+from qgis.PyQt.QtCore import QFile, QIODevice, QUrl
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgis_hub_plugin.__about__ import DIR_PLUGIN_ROOT
 from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.exception import DownloadError
 
-# Set QGIS_HUB_DIR conditionally
-if QGIS_AVAILABLE:
-    QGIS_HUB_DIR = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
-else:
-    QGIS_HUB_DIR = Path("/tmp/qgis_hub")  # Fallback for testing
+QGIS_HUB_DIR = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
 
 
 def get_icon(icon_name: str) -> QIcon:
