@@ -24,38 +24,30 @@ pytest tests/ -v -m "not qgis"
 ## Test Structure
 
 ### Unit Tests (`tests/unit/`)
-**Fast tests** that mock external dependencies. Run with or without QGIS.
+**Lightweight tests** with no QGIS dependencies.
 
-- ✅ **No QGIS required** - Uses conditional imports
-- ✅ **Fast execution** (~7 seconds with QGIS, < 1s without)
-- ✅ **Runs in both CI jobs**
-- Coverage: API client, resource items, utilities, metadata
+- ✅ **No QGIS required**
+- ✅ **Very fast execution** (< 1 second)
+- ✅ **Runs in unit CI job**
+- Coverage: Plugin metadata parsing
 
 **Files:**
-- `test_api_client_mocked.py` - API with mocked network (9 tests)
-- `test_resource_item.py` - Resource item creation (20 tests)
-- `test_utilities.py` - Download and utility functions (16 tests)
-- `test_plg_metadata.py` - Metadata parsing (2 tests)
+- `test_plg_metadata.py` - Metadata parsing and validation (2 tests)
 
-**How it works without QGIS:**
-Source modules use conditional imports with fallbacks:
-- `api_client.py` - QgsApplication fallback to None
-- `utilities/common.py` - All QGIS/Qt classes fallback to None
-- `gui/resource_item.py` - QStandardItem fallback to object, QIcon to None
-
-Tests mock all QGIS classes, so they work whether QGIS is installed or not.
-
-### Integration Tests (`tests/qgis/`)
-**Slower tests** that require a full QGIS environment. These test the actual plugin integration with QGIS.
+### QGIS Tests (`tests/qgis/`)
+**All tests** that require QGIS (unit tests with mocks + integration tests).
 
 - ⚠️ **Requires QGIS installation**
-- ⚠️ **Slower execution** (~8-10 seconds total)
-- ⚠️ **Requires display server** (X11 or Wayland)
-- Coverage: Resource browser dialog, filtering, QGIS integration
+- ⚠️ **Slower execution** (~8 seconds total)
+- ⚠️ **Requires display server** (X11 or Wayland, or offscreen mode)
+- Coverage: API client, resource items, utilities, filtering, integration
 
 **Files:**
-- `test_filter_proxy.py` - MultiRoleFilterProxyModel
-- `test_integration.py` - End-to-end workflows
+- `test_api_client_mocked.py` - API client with mocked network (9 tests)
+- `test_resource_item.py` - Resource item creation with mocks (20 tests)
+- `test_utilities.py` - Download utilities with mocks (42 tests)
+- `test_filter_proxy.py` - MultiRoleFilterProxyModel (18 tests)
+- `test_integration.py` - End-to-end workflows (6 tests)
 - `test_api_client.py` - Real API calls (optional)
 - `test_plg_preferences.py` - Settings structure
 
@@ -221,13 +213,11 @@ pytest tests/unit/ --cov=qgis_hub_plugin --cov-report=term
 
 | Test Suite | Tests | Time | QGIS Required |
 |------------|-------|------|---------------|
-| Unit Tests (no QGIS) | 47 | < 1s | ❌ No - uses mocks |
-| Unit Tests (with QGIS) | 47 | ~7s | ⚠️ Optional - works both ways |
-| Integration Tests | 6 | ~8-10s | ✅ Yes |
-| Filter Proxy Tests | 18 | ~2-3s | ✅ Yes |
-| **Total** | **73** | **~1s (no QGIS) / ~15-20s (with QGIS)** | Partial |
+| Unit Tests | 2 | < 1s | ❌ No |
+| QGIS Tests | 71 | ~8s | ✅ Yes |
+| **Total** | **73** | **~9s** | Mostly |
 
-**Note:** Unit tests use conditional imports and mocks, so they run in both CI jobs. Integration tests require QGIS.
+**Note:** Almost all tests (71/73) require QGIS. Only metadata tests can run without QGIS.
 
 ## Debugging Failed Tests
 
@@ -306,18 +296,18 @@ The project uses GitHub Actions for automated testing:
 
 **1. Unit Tests (No QGIS)**
 - Runs on: Ubuntu Latest + Python 3.9
-- Duration: ~10 seconds
+- Duration: ~5 seconds
 - Command: `pytest tests/unit/ -v`
 - No QGIS installation required
-- Runs: All 47 unit tests with mocked QGIS classes
+- Runs: 2 metadata tests only
 - Uploads coverage to Codecov
 
-**2. All QGIS Tests**
+**2. QGIS Tests**
 - Runs on: QGIS Docker container (`qgis/qgis:release-3_34`)
 - Duration: ~1-2 minutes
 - Command: `pytest tests/ -v`
 - Full QGIS environment
-- Runs: All 73 tests (47 unit + 26 integration/filter)
+- Runs: All 73 tests (2 unit + 71 QGIS)
 - Uploads coverage to Codecov
 
 ### Environment Setup
