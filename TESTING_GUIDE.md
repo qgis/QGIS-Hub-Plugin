@@ -24,20 +24,26 @@ pytest tests/ -v -m "not qgis"
 ## Test Structure
 
 ### Unit Tests (`tests/unit/`)
-**Fast tests** that don't require QGIS. These tests use mocks for all external dependencies.
+**Fast tests** that mock external dependencies. Most require QGIS due to module imports.
 
-- ✅ **No QGIS installation needed** (most tests)
-- ✅ **Fast execution** (milliseconds)
-- ✅ **Run in CI/CD easily**
-- Coverage: API client, resource items, utilities
+- ⚠️ **QGIS required for most tests** (45/47 tests)
+- ✅ **Fast execution** (~7 seconds with QGIS)
+- ✅ **Auto-skip when QGIS unavailable**
+- Coverage: API client, resource items, utilities, metadata
 
 **Files:**
-- `test_api_client_mocked.py` - API with mocked network
-- `test_resource_item.py` - Resource item creation (requires QGIS, skipped in CI if unavailable)
-- `test_utilities.py` - Download and utility functions
-- `test_plg_metadata.py` - Metadata parsing
+- `test_api_client_mocked.py` - API with mocked network (requires QGIS)
+- `test_resource_item.py` - Resource item creation (requires QGIS)
+- `test_utilities.py` - Download and utility functions (requires QGIS)
+- `test_plg_metadata.py` - Metadata parsing (no QGIS needed)
 
-**Note:** `test_resource_item.py` actually requires QGIS because it creates `ResourceItem` objects which inherit from Qt's `QStandardItem`. These tests are automatically skipped when QGIS is not available (e.g., in the unit tests CI job) and will run in the QGIS integration tests CI job instead.
+**Why QGIS Required?**
+Most unit test files import modules that have QGIS dependencies at the top level:
+- `api_client.py` imports `QgsApplication`
+- `utilities/common.py` imports `QgsApplication`, `QgsNetworkAccessManager`, Qt classes
+- `gui/resource_item.py` imports Qt classes (`QStandardItem`, `QIcon`)
+
+These tests are automatically skipped when QGIS is not available (unit CI job) and run in the QGIS CI job instead.
 
 ### Integration Tests (`tests/qgis/`)
 **Slower tests** that require a full QGIS environment. These test the actual plugin integration with QGIS.
@@ -215,13 +221,13 @@ pytest tests/unit/ --cov=qgis_hub_plugin --cov-report=term
 
 | Test Suite | Tests | Time | QGIS Required |
 |------------|-------|------|---------------|
-| Unit Tests (no QGIS) | 27 | < 1s | ❌ No |
-| Unit Tests (with QGIS) | 47 | ~7s | ⚠️ Partial (test_resource_item.py) |
+| Unit Tests (no QGIS) | 2 | < 1s | ❌ No (only test_plg_metadata.py) |
+| Unit Tests (with QGIS) | 47 | ~7s | ✅ Yes (45 tests require QGIS) |
 | Integration Tests | 6 | ~8-10s | ✅ Yes |
 | Filter Proxy Tests | 18 | ~2-3s | ✅ Yes |
-| **Total** | **52+** | **~10-15s** | Partial |
+| **Total** | **73** | **~15-20s** | Mostly |
 
-**Note:** In CI, the unit tests job runs 27 tests (skips test_resource_item.py), and the QGIS job runs all QGIS-dependent tests including those from tests/unit/.
+**Note:** In CI, the unit tests job runs only 2 tests (test_plg_metadata.py), and the QGIS job runs all 71 QGIS-dependent tests from both tests/unit/ and tests/qgis/.
 
 ## Debugging Failed Tests
 
@@ -298,19 +304,20 @@ The project uses GitHub Actions for automated testing:
 
 ### Workflow Jobs
 
-**1. Unit Tests (Fast)**
+**1. Unit Tests (No QGIS)**
 - Runs on: Ubuntu Latest + Python 3.9
-- Duration: ~30 seconds
+- Duration: ~5 seconds
 - Command: `pytest tests/unit/ -v`
-- No QGIS required (tests requiring QGIS are auto-skipped)
-- Note: `test_resource_item.py` tests are skipped here (run in QGIS job instead)
+- No QGIS required (45/47 tests auto-skipped)
+- Only runs: `test_plg_metadata.py` (2 tests)
 - Uploads coverage to Codecov
 
-**2. Integration Tests (QGIS)**
+**2. All QGIS Tests**
 - Runs on: QGIS Docker container (`qgis/qgis:release-3_34`)
 - Duration: ~1-2 minutes
-- Command: `pytest tests/qgis/ -v -m qgis`
+- Command: `pytest tests/ -v`
 - Full QGIS environment
+- Runs: 71 tests (45 from tests/unit/ + 26 from tests/qgis/)
 - Uploads coverage to Codecov
 
 ### Environment Setup
