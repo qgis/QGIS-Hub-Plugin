@@ -23,6 +23,9 @@ class ResourceItem(QStandardItem):
         self.name = params.get("name").strip()
         self.creator = params.get("creator").strip()
         upload_date_string = params.get("upload_date")
+        # Replace 'Z' with '+00:00' for Python < 3.11 compatibility
+        if upload_date_string.endswith("Z"):
+            upload_date_string = upload_date_string[:-1] + "+00:00"
         self.upload_date = datetime.fromisoformat(upload_date_string)
         self.download_count = params.get("download_count")
         self.description = params.get("description")
