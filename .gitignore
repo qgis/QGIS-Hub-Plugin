@@ -129,3 +129,6 @@ dmypy.json
 *.zip
 .vscode/
 *.qm
+
+# QGIS Hub cache directory
+qgis_hub/

@@ -2,6 +2,7 @@
 # --------------------
 
 pytest-cov>=3,<5
+pytest-mock>=3.10,<4
 packaging>=23
 
 requests>=2.25.1
