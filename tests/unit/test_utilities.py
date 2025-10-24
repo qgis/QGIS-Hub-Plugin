@@ -193,7 +193,7 @@ class TestThumbnailUtilities(unittest.TestCase):
         """Test thumbnail download with empty URL returns default icon."""
         from qgis_hub_plugin.utilities.common import download_resource_thumbnail
 
-        mock_icon_path.return_value = "/default/icon.svg"
+        mock_icon_path.return_value = "/default/QGIS_Hub_icon.svg"
 
         result = download_resource_thumbnail("", "test-uuid")
 
@@ -205,7 +205,7 @@ class TestThumbnailUtilities(unittest.TestCase):
         """Test that default QGIS icon URL returns plugin icon."""
         from qgis_hub_plugin.utilities.common import download_resource_thumbnail
 
-        mock_icon_path.return_value = "/default/icon.svg"
+        mock_icon_path.return_value = "/default/QGIS_Hub_icon.svg"
 
         # URL ending with default QGIS icon
         url = "https://example.com/qgis-icon-32x32.png"
@@ -226,7 +226,7 @@ class TestThumbnailUtilities(unittest.TestCase):
         # Mock failed download
         mock_download.return_value = None
         mock_exists.return_value = False
-        mock_icon_path.return_value = "/default/icon.svg"
+        mock_icon_path.return_value = "/default/QGIS_Hub_icon.svg"
 
         result = download_resource_thumbnail("https://example.com/thumb.jpg", "uuid")
 

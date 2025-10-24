@@ -20,6 +20,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from qgis.PyQt.QtGui import QIcon
 
 
 class TestResourceItem(unittest.TestCase):
@@ -55,7 +56,7 @@ class TestResourceItem(unittest.TestCase):
 
         # Mock thumbnail download returns None (use default icon)
         mock_download_thumb.return_value = None
-        mock_icon = MagicMock()
+        mock_icon = QIcon()
         mock_get_icon.return_value = mock_icon
 
         item = ResourceItem(self.sample_resource)
@@ -101,7 +102,7 @@ class TestResourceItem(unittest.TestCase):
         from qgis_hub_plugin.gui.resource_item import ResourceItem
 
         mock_download_thumb.return_value = None
-        mock_get_icon.return_value = MagicMock()
+        mock_get_icon.return_value = QIcon()
 
         # Create resource with very long name (100 characters)
         long_name = "A" * 100
@@ -128,6 +129,8 @@ class TestResourceItem(unittest.TestCase):
         # Mock successful thumbnail download
         mock_thumb_path = Path("/tmp/thumb.jpg")
         mock_download_thumb.return_value = mock_thumb_path
+        # Mock QIcon to return a real QIcon object (Qt requires actual QIcon, not MagicMock)
+        mock_qicon.return_value = QIcon()
 
         item = ResourceItem(self.sample_resource)
 
@@ -145,7 +148,7 @@ class TestResourceItem(unittest.TestCase):
         from qgis_hub_plugin.gui.resource_item import ResourceItem
 
         mock_download_thumb.return_value = None
-        mock_get_icon.return_value = MagicMock()
+        mock_get_icon.return_value = QIcon()
 
         self.sample_resource["resource_type"] = "style"
         self.sample_resource["resource_subtype"] = "symbol"
@@ -163,7 +166,7 @@ class TestResourceItem(unittest.TestCase):
         from qgis_hub_plugin.gui.resource_item import ResourceItem
 
         mock_download_thumb.return_value = None
-        mock_get_icon.return_value = MagicMock()
+        mock_get_icon.return_value = QIcon()
 
         self.sample_resource["dependencies"] = ["numpy", "pandas", "geopandas"]
 
@@ -180,7 +183,7 @@ class TestResourceItem(unittest.TestCase):
         from qgis_hub_plugin.gui.resource_item import ResourceItem
 
         mock_download_thumb.return_value = None
-        mock_get_icon.return_value = MagicMock()
+        mock_get_icon.return_value = QIcon()
 
         self.sample_resource["name"] = "  Test Resource  "
         self.sample_resource["creator"] = "  Test Creator  "
@@ -253,7 +256,7 @@ def test_name_truncation_parameterized(name, expected_text, sample_model_resourc
     from qgis_hub_plugin.gui.resource_item import ResourceItem
 
     with patch("qgis_hub_plugin.gui.resource_item.download_resource_thumbnail"):
-        with patch("qgis_hub_plugin.gui.resource_item.get_icon"):
+        with patch("qgis_hub_plugin.gui.resource_item.get_icon", return_value=QIcon()):
             sample_model_resource["name"] = name
             item = ResourceItem(sample_model_resource)
             assert item.text() == expected_text
@@ -283,7 +286,7 @@ def test_various_resource_types(resource_type, subtype, sample_model_resource):
     from qgis_hub_plugin.gui.resource_item import ResourceItem
 
     with patch("qgis_hub_plugin.gui.resource_item.download_resource_thumbnail"):
-        with patch("qgis_hub_plugin.gui.resource_item.get_icon"):
+        with patch("qgis_hub_plugin.gui.resource_item.get_icon", return_value=QIcon()):
             sample_model_resource["resource_type"] = resource_type
             sample_model_resource["resource_subtype"] = subtype
 
