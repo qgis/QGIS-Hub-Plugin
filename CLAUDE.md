@@ -281,10 +281,34 @@ qgis_hub_plugin/
 
 ## CI/CD
 
-The project uses GitHub Actions for:
-- **Linter** (`.github/workflows/linter.yml`): Runs flake8 on Python code
-- **Tester** (`.github/workflows/tester.yml`): Runs pytest on unit tests
-- **Documentation** (`.github/workflows/documentation.yml`): Builds and publishes Sphinx docs
-- **Releaser** (`.github/workflows/releaser.yml`): Packages and releases plugin
+The project uses GitHub Actions for automated testing and deployment:
 
-Tests run on push/PR when `**.py` files are modified.
+### Workflows
+
+**Tester** (`.github/workflows/tester.yml`):
+- **Unit Tests**: Fast tests without QGIS (~30 seconds)
+  - Runs on: Ubuntu Latest + Python 3.9
+  - Tests: `tests/unit/` (28+ tests)
+- **Integration Tests**: Tests with QGIS (~1-2 minutes)
+  - Runs on: QGIS Docker container (`qgis/qgis:release-3_34`)
+  - Tests: `tests/qgis/` (24+ tests)
+  - Environment: `QT_QPA_PLATFORM=offscreen` (no display)
+
+**Linter** (`.github/workflows/linter.yml`):
+- Runs flake8 on Python code
+
+**Documentation** (`.github/workflows/documentation.yml`):
+- Builds and publishes Sphinx docs to GitHub Pages
+
+**Releaser** (`.github/workflows/releaser.yml`):
+- Packages and releases plugin
+
+### Triggers
+Tests run on push/PR to `main` when `**.py` files are modified.
+
+### QGIS in CI
+Integration tests use the official QGIS Docker image for consistent environment:
+- Image: `qgis/qgis:release-3_34` (QGIS LTS)
+- No manual QGIS installation needed
+- Full PyQGIS and Qt libraries included
+- See [`.github/workflows/README.md`](.github/workflows/README.md) for details

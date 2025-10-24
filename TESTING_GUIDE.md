@@ -267,14 +267,76 @@ export DISPLAY=:0
 
 ## Docker Testing (Advanced)
 
-For consistent QGIS environment:
+For consistent QGIS environment (same as CI):
 
 ```bash
-# Use QGIS Docker image
-docker run --rm -v $(pwd):/tests \
-  qgis/qgis:release-3_28 \
-  sh -c "cd /tests && pytest tests/qgis/ -v"
+# Pull QGIS image (same as CI uses)
+docker pull qgis/qgis:release-3_34
+
+# Run integration tests in container
+docker run --rm -v $(pwd):/app -w /app \
+  -e QT_QPA_PLATFORM=offscreen \
+  -e PYTHONPATH=/usr/share/qgis/python/plugins:/usr/share/qgis/python \
+  qgis/qgis:release-3_34 \
+  bash -c "pip install -r requirements/testing.txt && pytest tests/qgis/ -v"
+
+# Run all tests in container
+docker run --rm -v $(pwd):/app -w /app \
+  -e QT_QPA_PLATFORM=offscreen \
+  qgis/qgis:release-3_34 \
+  bash -c "pip install -r requirements/testing.txt && pytest tests/ -v"
 ```
+
+## CI/CD Testing
+
+The project uses GitHub Actions for automated testing:
+
+### Workflow Jobs
+
+**1. Unit Tests (Fast)**
+- Runs on: Ubuntu Latest + Python 3.9
+- Duration: ~30 seconds
+- Command: `pytest tests/unit/ -v`
+- No QGIS required
+- Uploads coverage to Codecov
+
+**2. Integration Tests (QGIS)**
+- Runs on: QGIS Docker container (`qgis/qgis:release-3_34`)
+- Duration: ~1-2 minutes
+- Command: `pytest tests/qgis/ -v -m qgis`
+- Full QGIS environment
+- Uploads coverage to Codecov
+
+### Environment Setup
+
+The CI uses the official QGIS Docker images:
+
+```yaml
+container:
+  image: qgis/qgis:release-3_34  # QGIS LTS
+  options: --user root
+
+env:
+  QT_QPA_PLATFORM: offscreen      # No display needed
+  QGIS_PREFIX_PATH: /usr
+  PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python
+```
+
+### Triggers
+
+Tests run automatically on:
+- Push to `main` branch (when `**.py` files change)
+- Pull requests to `main` branch (when `**.py` files change)
+
+### View Test Results
+
+Check test status:
+1. Go to GitHub repository
+2. Click "Actions" tab
+3. View workflow runs
+4. See detailed test logs
+
+For more details, see [`.github/workflows/README.md`](../.github/workflows/README.md)
 
 ## Summary
 

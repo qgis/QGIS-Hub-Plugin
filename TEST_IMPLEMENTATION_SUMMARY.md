@@ -249,18 +249,76 @@ This is normal! See [TESTING_GUIDE.md](TESTING_GUIDE.md) for details and trouble
 
 ### CI/CD Integration
 
-Tests integrate with existing GitHub Actions:
+The project uses GitHub Actions for automated testing with **two separate jobs**:
 
-**`.github/workflows/tester.yml`** already configured to run:
+#### 1. Unit Tests Job (Fast)
+**Environment:** Ubuntu Latest + Python 3.9
+**Duration:** ~30 seconds
+**Command:** `pytest tests/unit/ -v`
+**Coverage:** Uploads to Codecov with `unit` flag
+
 ```yaml
-- name: Run Unit tests
-  run: pytest tests/unit/
+jobs:
+  tests-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - run: pip install -r requirements/testing.txt
+      - run: pytest tests/unit/ -v --cov=qgis_hub_plugin
 ```
 
-New tests will automatically run on:
-- Push to `main` branch
-- Pull requests to `main` branch
-- Only when `**.py` files are modified
+#### 2. Integration Tests Job (QGIS)
+**Environment:** QGIS Docker container (`qgis/qgis:release-3_34`)
+**Duration:** ~1-2 minutes
+**Command:** `pytest tests/qgis/ -v -m qgis`
+**Coverage:** Uploads to Codecov with `integration` flag
+
+```yaml
+jobs:
+  tests-qgis:
+    runs-on: ubuntu-latest
+    container:
+      image: qgis/qgis:release-3_34
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -r requirements/testing.txt
+      - run: pytest tests/qgis/ -v -m qgis
+```
+
+#### Why QGIS Docker Container?
+
+The integration tests **require QGIS** to run. In CI, we use the official QGIS Docker images:
+
+✅ **Benefits:**
+- No manual QGIS installation
+- Consistent QGIS environment
+- Multiple versions available
+- Faster than installing QGIS from apt
+- Isolated from host system
+
+🐳 **Image Used:** `qgis/qgis:release-3_34`
+- QGIS LTS version 3.34
+- Includes PyQGIS and Qt libraries
+- Pre-configured environment
+
+#### Triggers
+
+Tests run automatically on:
+- Push to `main` branch (when `**.py` files change)
+- Pull requests to `main` branch (when `**.py` files change)
+
+#### Test Status
+
+Check test results on GitHub:
+1. Go to repository → Actions tab
+2. View workflow runs
+3. See detailed logs for each job
+
+For more details, see [`.github/workflows/README.md`](.github/workflows/README.md)
 
 ## Mock Data Structure
 
