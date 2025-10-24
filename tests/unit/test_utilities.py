@@ -21,16 +21,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Check if QGIS is available
-try:
-    from qgis.core import QgsApplication
-
-    QGIS_AVAILABLE = True
-except ImportError:
-    QGIS_AVAILABLE = False
-
-pytestmark = pytest.mark.skipif(not QGIS_AVAILABLE, reason="Requires QGIS")
-
 
 class TestDownloadUtilities(unittest.TestCase):
     """Test download-related utility functions."""

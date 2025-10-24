@@ -1,6 +1,11 @@
 from datetime import datetime
 
-from qgis.PyQt.QtGui import QIcon, QStandardItem
+# Conditional QGIS imports for testing without QGIS
+try:
+    from qgis.PyQt.QtGui import QIcon, QStandardItem
+except ImportError:
+    QIcon = None
+    QStandardItem = object  # Fallback to basic object for testing
 
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
