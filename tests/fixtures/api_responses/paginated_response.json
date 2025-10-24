@@ -1,0 +1,21 @@
+{
+  "count": 1000,
+  "next": "https://hub.qgis.org/api/v1/resources/?page=2",
+  "previous": null,
+  "total": 2500,
+  "results": [
+    {
+      "uuid": "paginated-uuid-1",
+      "name": "Paginated Resource 1",
+      "description": "First resource in paginated results",
+      "resource_type": "model",
+      "resource_subtype": "",
+      "creator": "Pagination Tester",
+      "upload_date": "2024-01-01T00:00:00Z",
+      "download_count": 10,
+      "file": "https://example.com/resource1.model3",
+      "thumbnail": "https://example.com/thumb1.jpg",
+      "dependencies": []
+    }
+  ]
+}
