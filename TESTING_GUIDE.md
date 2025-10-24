@@ -26,16 +26,18 @@ pytest tests/ -v -m "not qgis"
 ### Unit Tests (`tests/unit/`)
 **Fast tests** that don't require QGIS. These tests use mocks for all external dependencies.
 
-- ✅ **No QGIS installation needed**
+- ✅ **No QGIS installation needed** (most tests)
 - ✅ **Fast execution** (milliseconds)
 - ✅ **Run in CI/CD easily**
 - Coverage: API client, resource items, utilities
 
 **Files:**
 - `test_api_client_mocked.py` - API with mocked network
-- `test_resource_item.py` - Resource item creation
+- `test_resource_item.py` - Resource item creation (requires QGIS, skipped in CI if unavailable)
 - `test_utilities.py` - Download and utility functions
 - `test_plg_metadata.py` - Metadata parsing
+
+**Note:** `test_resource_item.py` actually requires QGIS because it creates `ResourceItem` objects which inherit from Qt's `QStandardItem`. These tests are automatically skipped when QGIS is not available (e.g., in the unit tests CI job) and will run in the QGIS integration tests CI job instead.
 
 ### Integration Tests (`tests/qgis/`)
 **Slower tests** that require a full QGIS environment. These test the actual plugin integration with QGIS.
@@ -213,10 +215,13 @@ pytest tests/unit/ --cov=qgis_hub_plugin --cov-report=term
 
 | Test Suite | Tests | Time | QGIS Required |
 |------------|-------|------|---------------|
-| Unit Tests | 28+ | < 1s | ❌ No |
+| Unit Tests (no QGIS) | 27 | < 1s | ❌ No |
+| Unit Tests (with QGIS) | 47 | ~7s | ⚠️ Partial (test_resource_item.py) |
 | Integration Tests | 6 | ~8-10s | ✅ Yes |
 | Filter Proxy Tests | 18 | ~2-3s | ✅ Yes |
 | **Total** | **52+** | **~10-15s** | Partial |
+
+**Note:** In CI, the unit tests job runs 27 tests (skips test_resource_item.py), and the QGIS job runs all QGIS-dependent tests including those from tests/unit/.
 
 ## Debugging Failed Tests
 
@@ -297,7 +302,8 @@ The project uses GitHub Actions for automated testing:
 - Runs on: Ubuntu Latest + Python 3.9
 - Duration: ~30 seconds
 - Command: `pytest tests/unit/ -v`
-- No QGIS required
+- No QGIS required (tests requiring QGIS are auto-skipped)
+- Note: `test_resource_item.py` tests are skipped here (run in QGIS job instead)
 - Uploads coverage to Codecov
 
 **2. Integration Tests (QGIS)**
