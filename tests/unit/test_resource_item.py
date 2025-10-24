@@ -20,7 +20,19 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from qgis.PyQt.QtGui import QIcon
+
+# Try to import QIcon from QGIS, skip tests if not available
+try:
+    from qgis.PyQt.QtGui import QIcon
+
+    QGIS_AVAILABLE = True
+except ImportError:
+    QGIS_AVAILABLE = False
+    # Create a mock QIcon class for when QGIS is not available
+    # These tests will be skipped anyway, but this prevents import errors
+    QIcon = MagicMock
+
+pytestmark = pytest.mark.skipif(not QGIS_AVAILABLE, reason="Requires QGIS")
 
 
 class TestResourceItem(unittest.TestCase):
