@@ -535,11 +535,11 @@ class TestDownloadFunctionality(unittest.TestCase):
     """Tests for resource download functionality."""
 
     @patch("qgis_hub_plugin.gui.resource_browser.download_file")
-    @patch("qgis_hub_plugin.gui.resource_browser.QFileDialog")
+    @patch("qgis_hub_plugin.gui.resource_browser.QFileDialog.getSaveFileName")
     @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
     @patch("qgis_hub_plugin.gui.resource_browser.download_resource_thumbnail")
     def test_download_resource_opens_file_dialog(
-        self, mock_thumbnail, mock_api, mock_file_dialog, mock_download
+        self, mock_thumbnail, mock_api, mock_get_save_filename, mock_download
     ):
         """Test that download_resource opens a file dialog and downloads file."""
         from pathlib import Path
@@ -569,8 +569,8 @@ class TestDownloadFunctionality(unittest.TestCase):
         }
         mock_thumbnail.return_value = None
 
-        # Mock file dialog to return a path
-        mock_file_dialog.getSaveFileName.return_value = (
+        # Mock file dialog to return a path without showing the dialog
+        mock_get_save_filename.return_value = (
             "/tmp/downloaded_resource.model3",
             "Model files (*.model3)",
         )
@@ -585,7 +585,7 @@ class TestDownloadFunctionality(unittest.TestCase):
         dialog.download_resource()
 
         # Verify file dialog was opened
-        mock_file_dialog.getSaveFileName.assert_called_once()
+        mock_get_save_filename.assert_called_once()
 
         # Verify download_file was called with correct arguments
         mock_download.assert_called_once()
@@ -593,11 +593,11 @@ class TestDownloadFunctionality(unittest.TestCase):
         self.assertEqual(call_args[0][0], "https://example.com/resource.model3")
         self.assertEqual(call_args[0][1], Path("/tmp/downloaded_resource.model3"))
 
-    @patch("qgis_hub_plugin.gui.resource_browser.QFileDialog")
+    @patch("qgis_hub_plugin.gui.resource_browser.QFileDialog.getSaveFileName")
     @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
     @patch("qgis_hub_plugin.gui.resource_browser.download_resource_thumbnail")
     def test_download_cancelled_by_user(
-        self, mock_thumbnail, mock_api, mock_file_dialog
+        self, mock_thumbnail, mock_api, mock_get_save_filename
     ):
         """Test that download is cancelled when user closes file dialog without selecting."""
         from qgis_hub_plugin.gui.resource_browser import ResourceBrowserDialog
@@ -625,8 +625,8 @@ class TestDownloadFunctionality(unittest.TestCase):
         }
         mock_thumbnail.return_value = None
 
-        # Mock file dialog to return empty (user cancelled)
-        mock_file_dialog.getSaveFileName.return_value = ("", "")
+        # Mock file dialog to return empty (user cancelled) without showing dialog
+        mock_get_save_filename.return_value = ("", "")
 
         # Create dialog
         dialog = ResourceBrowserDialog()
@@ -638,7 +638,7 @@ class TestDownloadFunctionality(unittest.TestCase):
         dialog.download_resource()
 
         # Verify file dialog was opened
-        mock_file_dialog.getSaveFileName.assert_called_once()
+        mock_get_save_filename.assert_called_once()
 
 
 class TestViewPersistence(unittest.TestCase):
