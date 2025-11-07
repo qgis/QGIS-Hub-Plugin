@@ -93,7 +93,7 @@ class TestResourceItem(unittest.TestCase):
         self.assertEqual(item.data(ResourceTypeRole), "model")
         self.assertEqual(item.data(NameRole), "Test Resource")
         self.assertEqual(item.data(CreatorRole), "Test Creator")
-        self.assertEqual(item.data(ResourceSubtypeRole), "")
+        self.assertEqual(item.data(ResourceSubtypeRole), [])
 
         # Verify icon was set
         mock_download_thumb.assert_called_once_with(
