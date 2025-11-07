@@ -9,7 +9,11 @@ from qgis_hub_plugin.gui.constants import (
     ResourceTypeRole,
     SortingRole,
 )
-from qgis_hub_plugin.utilities.common import download_resource_thumbnail, get_icon
+from qgis_hub_plugin.utilities.common import (
+    download_resource_thumbnail,
+    get_icon,
+    normalize_resource_subtypes,
+)
 
 
 class ResourceItem(QStandardItem):
@@ -20,19 +24,7 @@ class ResourceItem(QStandardItem):
         self.resource_type = params.get("resource_type")
 
         # Handle both old (resource_subtype string) and new (resource_subtypes array) formats
-        if "resource_subtypes" in params:
-            # New API format - subtypes is an array
-            subtypes = params.get("resource_subtypes", [])
-            self.resource_subtypes = (
-                subtypes
-                if isinstance(subtypes, list)
-                else [subtypes] if subtypes else []
-            )
-        else:
-            # Old API format - resource_subtype is a single string
-            # Convert to list for consistency
-            subtype = params.get("resource_subtype", "")
-            self.resource_subtypes = [subtype] if subtype else []
+        self.resource_subtypes = normalize_resource_subtypes(params)
 
         # Keep backward compatibility - resource_subtype as the first subtype or empty string
         self.resource_subtype = (

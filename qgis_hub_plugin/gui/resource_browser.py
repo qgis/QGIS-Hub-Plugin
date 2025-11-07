@@ -53,6 +53,7 @@ from qgis_hub_plugin.utilities.common import (
     QGIS_HUB_DIR,
     download_file,
     download_resource_thumbnail,
+    normalize_resource_subtypes,
 )
 from qgis_hub_plugin.utilities.exception import DownloadError
 from qgis_hub_plugin.utilities.qgis_util import show_busy_cursor
@@ -314,20 +315,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                         for resource in self.resources:
                             if resource.get("resource_type") == resource_type:
                                 # Handle both old and new API formats
-                                resource_subtypes = []
-                                if "resource_subtypes" in resource:
-                                    subtypes = resource.get("resource_subtypes", [])
-                                    resource_subtypes = (
-                                        subtypes
-                                        if isinstance(subtypes, list)
-                                        else [subtypes] if subtypes else []
-                                    )
-                                elif "resource_subtype" in resource and resource.get(
-                                    "resource_subtype"
-                                ):
-                                    resource_subtypes = [
-                                        resource.get("resource_subtype")
-                                    ]
+                                resource_subtypes = normalize_resource_subtypes(
+                                    resource
+                                )
 
                                 # Set all other subtypes to False
                                 for subtype in resource_subtypes:
@@ -920,18 +910,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                         resource_type = resource.get("resource_type")
 
                         # Handle both old and new API formats
-                        resource_subtypes = []
-                        if "resource_subtypes" in resource:
-                            subtypes = resource.get("resource_subtypes", [])
-                            resource_subtypes = (
-                                subtypes
-                                if isinstance(subtypes, list)
-                                else [subtypes] if subtypes else []
-                            )
-                        elif "resource_subtype" in resource and resource.get(
-                            "resource_subtype"
-                        ):
-                            resource_subtypes = [resource.get("resource_subtype")]
+                        resource_subtypes = normalize_resource_subtypes(resource)
 
                         # If the resource type belongs to this category and has subtypes
                         if resource_type in types:
@@ -980,18 +959,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     resource_type = resource.get("resource_type")
 
                     # Handle both old and new API formats
-                    resource_subtypes = []
-                    if "resource_subtypes" in resource:
-                        subtypes = resource.get("resource_subtypes", [])
-                        resource_subtypes = (
-                            subtypes
-                            if isinstance(subtypes, list)
-                            else [subtypes] if subtypes else []
-                        )
-                    elif "resource_subtype" in resource and resource.get(
-                        "resource_subtype"
-                    ):
-                        resource_subtypes = [resource.get("resource_subtype")]
+                    resource_subtypes = normalize_resource_subtypes(resource)
 
                     # If this resource is of the unknown type and has subtypes
                     if resource_type == unknown_type:

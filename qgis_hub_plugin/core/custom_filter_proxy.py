@@ -50,11 +50,11 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
         if not self.checkbox_states.get(resource_type, False):
             return False
 
-        # Handle subtype filtering (subtypes is now a list)
+        # Handle subtype filtering (subtypes should be a list)
         if resource_subtypes:
-            # Ensure we're working with a list
+            # Defensive: ensure we're working with a list
             if not isinstance(resource_subtypes, list):
-                resource_subtypes = [resource_subtypes] if resource_subtypes else []
+                resource_subtypes = [resource_subtypes]
 
             # Check if any of the resource's subtypes match enabled filters
             has_enabled_subtype = False
