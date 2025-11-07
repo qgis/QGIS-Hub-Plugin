@@ -312,14 +312,28 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     # Now set other subtypes to False
                     if self.resources:
                         for resource in self.resources:
-                            if (
-                                resource.get("resource_type") == resource_type
-                                and resource.get("resource_subtype")
-                                and resource.get("resource_subtype") != selected_subtype
-                            ):
-                                # Create a key for this type+subtype combo and set it to False
-                                other_subtype_key = f"{resource_type}:{resource.get('resource_subtype')}"
-                                self.filter_states[other_subtype_key] = False
+                            if resource.get("resource_type") == resource_type:
+                                # Handle both old and new API formats
+                                resource_subtypes = []
+                                if "resource_subtypes" in resource:
+                                    subtypes = resource.get("resource_subtypes", [])
+                                    resource_subtypes = (
+                                        subtypes
+                                        if isinstance(subtypes, list)
+                                        else [subtypes] if subtypes else []
+                                    )
+                                elif "resource_subtype" in resource and resource.get(
+                                    "resource_subtype"
+                                ):
+                                    resource_subtypes = [
+                                        resource.get("resource_subtype")
+                                    ]
+
+                                # Set all other subtypes to False
+                                for subtype in resource_subtypes:
+                                    if subtype and subtype != selected_subtype:
+                                        other_subtype_key = f"{resource_type}:{subtype}"
+                                        self.filter_states[other_subtype_key] = False
                 else:
                     self.filter_states[resource_type] = False
 
@@ -433,15 +447,20 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Use a user-friendly display name for the resource type based on its category
         display_type = self.get_type_display_name(resource.resource_type)
         self.labelType.setText(display_type)
-        self.labelSubtype.setVisible(bool(resource.resource_subtype))
-        self.labelSubtypeLabel.setVisible(bool(resource.resource_subtype))
-        if resource.resource_subtype:
+
+        # Handle multiple subtypes
+        has_subtypes = bool(resource.resource_subtypes)
+        self.labelSubtype.setVisible(has_subtypes)
+        self.labelSubtypeLabel.setVisible(has_subtypes)
+        if has_subtypes:
             self.show_property(
                 self.labelSubtypeLabel,
                 self.labelSubtype,
                 self.labelTypeLabel,
             )
-            self.labelSubtype.setText(resource.resource_subtype)
+            # Join multiple subtypes with comma
+            subtypes_text = ", ".join(resource.resource_subtypes)
+            self.labelSubtype.setText(subtypes_text)
         else:
             self.hide_property(
                 self.labelSubtypeLabel,
@@ -899,13 +918,28 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     # First pass - collect all subtypes and their counts
                     for resource in self.resources:
                         resource_type = resource.get("resource_type")
-                        resource_subtype = resource.get("resource_subtype")
 
-                        # If the resource type belongs to this category and has a subtype
-                        if resource_type in types and resource_subtype:
-                            if resource_subtype not in subtypes_dict:
-                                subtypes_dict[resource_subtype] = 0
-                            subtypes_dict[resource_subtype] += 1
+                        # Handle both old and new API formats
+                        resource_subtypes = []
+                        if "resource_subtypes" in resource:
+                            subtypes = resource.get("resource_subtypes", [])
+                            resource_subtypes = (
+                                subtypes
+                                if isinstance(subtypes, list)
+                                else [subtypes] if subtypes else []
+                            )
+                        elif "resource_subtype" in resource and resource.get(
+                            "resource_subtype"
+                        ):
+                            resource_subtypes = [resource.get("resource_subtype")]
+
+                        # If the resource type belongs to this category and has subtypes
+                        if resource_type in types:
+                            for subtype in resource_subtypes:
+                                if subtype:
+                                    if subtype not in subtypes_dict:
+                                        subtypes_dict[subtype] = 0
+                                    subtypes_dict[subtype] += 1
 
                     # Second pass - add subtype items to the tree
                     for subtype, count in subtypes_dict.items():
@@ -944,13 +978,28 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 # Collect all subtypes and their counts
                 for resource in self.resources:
                     resource_type = resource.get("resource_type")
-                    resource_subtype = resource.get("resource_subtype")
 
-                    # If this resource is of the unknown type and has a subtype
-                    if resource_type == unknown_type and resource_subtype:
-                        if resource_subtype not in subtypes_dict:
-                            subtypes_dict[resource_subtype] = 0
-                        subtypes_dict[resource_subtype] += 1
+                    # Handle both old and new API formats
+                    resource_subtypes = []
+                    if "resource_subtypes" in resource:
+                        subtypes = resource.get("resource_subtypes", [])
+                        resource_subtypes = (
+                            subtypes
+                            if isinstance(subtypes, list)
+                            else [subtypes] if subtypes else []
+                        )
+                    elif "resource_subtype" in resource and resource.get(
+                        "resource_subtype"
+                    ):
+                        resource_subtypes = [resource.get("resource_subtype")]
+
+                    # If this resource is of the unknown type and has subtypes
+                    if resource_type == unknown_type:
+                        for subtype in resource_subtypes:
+                            if subtype:
+                                if subtype not in subtypes_dict:
+                                    subtypes_dict[subtype] = 0
+                                subtypes_dict[subtype] += 1
 
                 # Add subtype items to the tree
                 for subtype, count in subtypes_dict.items():

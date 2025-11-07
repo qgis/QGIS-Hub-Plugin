@@ -18,7 +18,27 @@ class ResourceItem(QStandardItem):
 
         # Attribute from the QGIS Hub
         self.resource_type = params.get("resource_type")
-        self.resource_subtype = params.get("resource_subtype", "")
+
+        # Handle both old (resource_subtype string) and new (resource_subtypes array) formats
+        if "resource_subtypes" in params:
+            # New API format - subtypes is an array
+            subtypes = params.get("resource_subtypes", [])
+            self.resource_subtypes = (
+                subtypes
+                if isinstance(subtypes, list)
+                else [subtypes] if subtypes else []
+            )
+        else:
+            # Old API format - resource_subtype is a single string
+            # Convert to list for consistency
+            subtype = params.get("resource_subtype", "")
+            self.resource_subtypes = [subtype] if subtype else []
+
+        # Keep backward compatibility - resource_subtype as the first subtype or empty string
+        self.resource_subtype = (
+            self.resource_subtypes[0] if self.resource_subtypes else ""
+        )
+
         self.uuid = params.get("uuid")
         self.name = params.get("name").strip()
         self.creator = params.get("creator").strip()
@@ -45,7 +65,8 @@ class ResourceItem(QStandardItem):
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
         self.setData(self.creator, CreatorRole)
-        self.setData(self.resource_subtype, ResourceSubtypeRole)
+        # Store subtypes as list in the role for filtering
+        self.setData(self.resource_subtypes, ResourceSubtypeRole)
 
 
 class AttributeSortingItem(QStandardItem):

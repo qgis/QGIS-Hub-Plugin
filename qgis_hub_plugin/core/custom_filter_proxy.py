@@ -1,6 +1,10 @@
 from qgis.PyQt.QtCore import QSortFilterProxyModel
 
-from qgis_hub_plugin.gui.constants import ResourceSubtypeRole, ResourceTypeRole, SortingRole
+from qgis_hub_plugin.gui.constants import (
+    ResourceSubtypeRole,
+    ResourceTypeRole,
+    SortingRole,
+)
 from qgis_hub_plugin.toolbelt import PlgLogger
 
 
@@ -40,21 +44,41 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
 
         index = model.index(source_row, 0, source_parent)
         resource_type = model.data(index, ResourceTypeRole)
-        resource_subtype = model.data(index, ResourceSubtypeRole)
+        resource_subtypes = model.data(index, ResourceSubtypeRole)
 
         # Check if the resource type is enabled
         if not self.checkbox_states.get(resource_type, False):
             return False
-        
-        # Handle subtype filtering
-        if resource_subtype:
-            # Check if there's a specific filter for this type+subtype combination
-            subtype_key = f"{resource_type}:{resource_subtype}"
-            
-            # If we have a specific filter for this subtype and it's False, filter it out
-            if subtype_key in self.checkbox_states and not self.checkbox_states[subtype_key]:
+
+        # Handle subtype filtering (subtypes is now a list)
+        if resource_subtypes:
+            # Ensure we're working with a list
+            if not isinstance(resource_subtypes, list):
+                resource_subtypes = [resource_subtypes] if resource_subtypes else []
+
+            # Check if any of the resource's subtypes match enabled filters
+            has_enabled_subtype = False
+            for subtype in resource_subtypes:
+                if subtype:
+                    subtype_key = f"{resource_type}:{subtype}"
+                    # If this specific subtype filter exists and is True, show the item
+                    if (
+                        subtype_key in self.checkbox_states
+                        and self.checkbox_states[subtype_key]
+                    ):
+                        has_enabled_subtype = True
+                        break
+
+            # If we have subtype filters for this resource type
+            subtype_filters_exist = any(
+                key.startswith(f"{resource_type}:")
+                for key in self.checkbox_states.keys()
+            )
+
+            # If subtype filters exist but none are enabled for this resource, filter it out
+            if subtype_filters_exist and not has_enabled_subtype:
                 return False
-        
+
         # Text search filtering
         for role in self.roles_to_filter:
             data = model.data(index, role)
@@ -64,6 +88,6 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
         # If we're filtering by roles and nothing matched, hide the item
         if self.roles_to_filter:
             return False
-        
+
         # Default to showing the item if no other filters applied
         return True

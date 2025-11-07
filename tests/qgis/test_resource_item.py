@@ -163,7 +163,9 @@ class TestResourceItem(unittest.TestCase):
 
         self.assertEqual(item.resource_type, "style")
         self.assertEqual(item.resource_subtype, "symbol")
-        self.assertEqual(item.data(ResourceSubtypeRole), "symbol")
+        # Now subtypes are stored as list in the role
+        self.assertEqual(item.resource_subtypes, ["symbol"])
+        self.assertEqual(item.data(ResourceSubtypeRole), ["symbol"])
 
     @patch("qgis_hub_plugin.gui.resource_item.download_resource_thumbnail")
     @patch("qgis_hub_plugin.gui.resource_item.get_icon")
@@ -301,7 +303,95 @@ def test_various_resource_types(resource_type, subtype, sample_model_resource):
             assert item.resource_type == resource_type
             assert item.resource_subtype == subtype
             assert item.data(ResourceTypeRole) == resource_type
-            assert item.data(ResourceSubtypeRole) == subtype
+            # For backward compatibility, data should now be a list
+            expected_subtypes = [subtype] if subtype else []
+            assert item.data(ResourceSubtypeRole) == expected_subtypes
+
+
+@pytest.mark.parametrize(
+    "subtypes,expected_list,expected_first",
+    [
+        ([], [], ""),
+        (["symbol"], ["symbol"], "symbol"),
+        (["symbol", "colorramp"], ["symbol", "colorramp"], "symbol"),
+        (["python", "r", "qgis"], ["python", "r", "qgis"], "python"),
+    ],
+)
+def test_resource_with_multiple_subtypes(
+    subtypes, expected_list, expected_first, sample_model_resource
+):
+    """Test ResourceItem with new resource_subtypes array format.
+
+    Args:
+        subtypes: Array of subtypes to test
+        expected_list: Expected subtypes list
+        expected_first: Expected first subtype (backward compatibility)
+        sample_model_resource: Fixture providing sample resource
+    """
+    from qgis_hub_plugin.gui.constants import ResourceSubtypeRole
+    from qgis_hub_plugin.gui.resource_item import ResourceItem
+
+    with patch("qgis_hub_plugin.gui.resource_item.download_resource_thumbnail"):
+        with patch("qgis_hub_plugin.gui.resource_item.get_icon", return_value=QIcon()):
+            sample_model_resource["resource_type"] = "style"
+            sample_model_resource["resource_subtypes"] = subtypes
+            # Remove old field if present
+            sample_model_resource.pop("resource_subtype", None)
+
+            item = ResourceItem(sample_model_resource)
+
+            assert item.resource_type == "style"
+            assert item.resource_subtypes == expected_list
+            # Backward compatibility - first subtype or empty string
+            assert item.resource_subtype == expected_first
+            # Data role should contain the list
+            assert item.data(ResourceSubtypeRole) == expected_list
+
+
+def test_backward_compatibility_old_api_format(sample_model_resource):
+    """Test backward compatibility with old resource_subtype format.
+
+    Args:
+        sample_model_resource: Fixture providing sample resource
+    """
+    from qgis_hub_plugin.gui.constants import ResourceSubtypeRole
+    from qgis_hub_plugin.gui.resource_item import ResourceItem
+
+    with patch("qgis_hub_plugin.gui.resource_item.download_resource_thumbnail"):
+        with patch("qgis_hub_plugin.gui.resource_item.get_icon", return_value=QIcon()):
+            # Use old API format with resource_subtype
+            sample_model_resource["resource_type"] = "style"
+            sample_model_resource["resource_subtype"] = "symbol"
+            # Ensure new field doesn't exist
+            sample_model_resource.pop("resource_subtypes", None)
+
+            item = ResourceItem(sample_model_resource)
+
+            # Should convert to list internally
+            assert item.resource_subtypes == ["symbol"]
+            assert item.resource_subtype == "symbol"
+            assert item.data(ResourceSubtypeRole) == ["symbol"]
+
+
+def test_empty_subtype_backward_compatibility(sample_model_resource):
+    """Test empty subtype with old API format.
+
+    Args:
+        sample_model_resource: Fixture providing sample resource
+    """
+    from qgis_hub_plugin.gui.constants import ResourceSubtypeRole
+    from qgis_hub_plugin.gui.resource_item import ResourceItem
+
+    with patch("qgis_hub_plugin.gui.resource_item.download_resource_thumbnail"):
+        with patch("qgis_hub_plugin.gui.resource_item.get_icon", return_value=QIcon()):
+            sample_model_resource["resource_subtype"] = ""
+            sample_model_resource.pop("resource_subtypes", None)
+
+            item = ResourceItem(sample_model_resource)
+
+            assert item.resource_subtypes == []
+            assert item.resource_subtype == ""
+            assert item.data(ResourceSubtypeRole) == []
 
 
 # ############################################################################

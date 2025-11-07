@@ -3,7 +3,7 @@
   "name": "Single Test Resource with a Very Long Name That Should Be Truncated When Displayed in the UI",
   "description": "A single resource for testing long name truncation and item creation",
   "resource_type": "model",
-  "resource_subtype": "",
+  "resource_subtypes": [],
   "creator": "Test Creator With Long Name",
   "upload_date": "2024-01-15T10:30:00Z",
   "download_count": 999,
