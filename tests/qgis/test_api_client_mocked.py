@@ -235,7 +235,7 @@ def test_get_all_resources_parameterized(
                             mock_download.assert_not_called()
 
                         assert result is not None
-                        assert result["total"] == 5
+                        assert result["total"] == 6
 
 
 # ############################################################################

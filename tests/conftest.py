@@ -24,7 +24,7 @@ def mock_api_full_response(fixtures_dir):
     """Load full mock API response from fixtures.
 
     Returns:
-        dict: Complete API response with 5 sample resources
+        dict: Complete API response with 6 sample resources
     """
     fixture_path = fixtures_dir / "api_responses" / "full_response.json"
     with open(fixture_path) as f:
