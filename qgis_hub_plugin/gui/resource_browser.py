@@ -231,7 +231,12 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def populate_resources(self, force_update=False):
         self.log(f"Populating resources {force_update}")
         if force_update or not self.resources:
-            response = get_all_resources(force_update=force_update)
+            try:
+                response = get_all_resources(force_update=force_update)
+            except DownloadError as e:
+                self.log(f"Failed to retrieve resources: {e}")
+                self.show_error_message(str(e))
+                return
 
             if response is None:
                 self.show_warning_message("Error populating the resources")
