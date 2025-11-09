@@ -38,4 +38,7 @@ def get_all_resources(force_update=False):
     if status and response_file.exists():
         return _load_response(response_file)
 
-    raise DownloadError(API_UNAVAILABLE_MESSAGE)
+    if response_file.exists():
+        return _load_response(response_file)
+
+    return None
