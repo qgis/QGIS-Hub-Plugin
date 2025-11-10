@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from qgis.core import QgsApplication, QgsNetworkAccessManager, QgsNetworkReplyContent
 from qgis.PyQt.QtCore import QFile, QIODevice, QUrl
@@ -12,6 +12,42 @@ from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.exception import DownloadError
 
 QGIS_HUB_DIR = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
+
+
+def normalize_resource_subtypes(resource_data: dict) -> List[str]:
+    """
+    Normalize resource subtypes from API response to a list format.
+
+    Handles both old API format (resource_subtype: string) and new API format
+    (resource_subtypes: array). Always returns a list of subtypes.
+
+    Args:
+        resource_data (dict): Resource data from API containing either
+            'resource_subtypes' (new format) or 'resource_subtype' (old format)
+
+    Returns:
+        List[str]: List of subtypes. Empty list if no subtypes are present.
+
+    Examples:
+        >>> normalize_resource_subtypes({"resource_subtypes": ["symbol", "colorramp"]})
+        ["symbol", "colorramp"]
+        >>> normalize_resource_subtypes({"resource_subtype": "symbol"})
+        ["symbol"]
+        >>> normalize_resource_subtypes({"resource_subtype": ""})
+        []
+    """
+    # Handle new API format (resource_subtypes array)
+    if "resource_subtypes" in resource_data:
+        subtypes = resource_data.get("resource_subtypes", [])
+        # Ensure it's a list
+        if isinstance(subtypes, list):
+            return subtypes
+        # Handle edge case where it might be a single value
+        return [subtypes] if subtypes else []
+
+    # Handle old API format (resource_subtype string)
+    subtype = resource_data.get("resource_subtype", "")
+    return [subtype] if subtype else []
 
 
 def get_icon(icon_name: str) -> QIcon:

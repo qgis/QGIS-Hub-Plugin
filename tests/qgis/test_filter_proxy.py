@@ -57,13 +57,15 @@ class TestFilterProxyModel(unittest.TestCase):
         Args:
             name: Resource name
             resource_type: Type of resource (model, style, etc.)
-            subtype: Subtype of resource (symbol, python, etc.)
+            subtype: Subtype of resource (symbol, python, etc.) - will be converted to list
             creator: Creator name
             download_count: Number of downloads (for sorting)
         """
         item = QStandardItem(name)
         item.setData(resource_type, ResourceTypeRole)
-        item.setData(subtype, ResourceSubtypeRole)
+        # Convert subtype to list to match new API format
+        subtypes = [subtype] if subtype else []
+        item.setData(subtypes, ResourceSubtypeRole)
         item.setData(name, NameRole)
         item.setData(creator, CreatorRole)
         item.setData(download_count, SortingRole)
@@ -116,7 +118,8 @@ class TestFilterProxyModel(unittest.TestCase):
         # Verify it's the symbol style
         index = self.proxy.index(0, 0)
         self.assertEqual(self.proxy.data(index, ResourceTypeRole), "style")
-        self.assertEqual(self.proxy.data(index, ResourceSubtypeRole), "symbol")
+        # Subtypes are now lists
+        self.assertEqual(self.proxy.data(index, ResourceSubtypeRole), ["symbol"])
 
     def test_filter_by_text_search(self):
         """Test text search filtering."""
@@ -247,11 +250,11 @@ class TestFilterProxyModel(unittest.TestCase):
         # Should show 2 models
         self.assertEqual(self.proxy.rowCount(), 2)
 
-        # Verify all have empty subtypes
+        # Verify all have empty subtypes (now a list)
         for row in range(self.proxy.rowCount()):
             index = self.proxy.index(row, 0)
             subtype = self.proxy.data(index, ResourceSubtypeRole)
-            self.assertEqual(subtype, "")
+            self.assertEqual(subtype, [])
 
     def test_dynamic_filter_updates(self):
         """Test that filters update dynamically."""
@@ -272,6 +275,76 @@ class TestFilterProxyModel(unittest.TestCase):
 
         # Should now show only 2 styles
         self.assertEqual(self.proxy.rowCount(), 2)
+
+    def test_filter_resource_with_multiple_subtypes(self):
+        """Test filtering a resource that has multiple subtypes."""
+        # Add a style with multiple subtypes
+        item = QStandardItem("Multi-Subtype Style")
+        item.setData("style", ResourceTypeRole)
+        item.setData(["symbol", "colorramp"], ResourceSubtypeRole)  # Multiple subtypes
+        item.setData("Multi-Subtype Style", NameRole)
+        item.setData("Creator F", CreatorRole)
+        item.setData(100, SortingRole)
+        self.model.appendRow(item)
+
+        # Enable style type and symbol subtype only
+        checkbox_states = {
+            "style": True,
+            "style:symbol": True,
+            "style:colorramp": False,  # Disable colorramp
+        }
+        self.proxy.setCheckboxStates(checkbox_states)
+        self.proxy.setRolesToFilter([NameRole])
+
+        # The multi-subtype resource should be shown because one of its subtypes (symbol) is enabled
+        # Total: 1 symbol style + 1 multi-subtype style = 2
+        self.assertEqual(self.proxy.rowCount(), 2)
+
+        # Find the multi-subtype item
+        found_multi = False
+        for row in range(self.proxy.rowCount()):
+            index = self.proxy.index(row, 0)
+            name = self.proxy.data(index, NameRole)
+            if name == "Multi-Subtype Style":
+                found_multi = True
+                subtypes = self.proxy.data(index, ResourceSubtypeRole)
+                self.assertEqual(subtypes, ["symbol", "colorramp"])
+                break
+
+        self.assertTrue(found_multi, "Multi-subtype resource should be visible")
+
+    def test_filter_multiple_subtypes_none_match(self):
+        """Test that resource with multiple subtypes is hidden when none match."""
+        # Add a style with multiple subtypes
+        item = QStandardItem("Multi-Subtype Style 2")
+        item.setData("style", ResourceTypeRole)
+        item.setData(["label", "text_format"], ResourceSubtypeRole)
+        item.setData("Multi-Subtype Style 2", NameRole)
+        item.setData("Creator G", CreatorRole)
+        item.setData(90, SortingRole)
+        self.model.appendRow(item)
+
+        # Enable style type but only symbol and colorramp subtypes
+        checkbox_states = {
+            "style": True,
+            "style:symbol": True,
+            "style:colorramp": True,
+            "style:label": False,  # Explicitly disable
+            "style:text_format": False,  # Explicitly disable
+        }
+        self.proxy.setCheckboxStates(checkbox_states)
+        self.proxy.setRolesToFilter([NameRole])
+
+        # Should show existing styles (symbol, colorramp) but not the new multi-subtype one
+        # Check that Multi-Subtype Style 2 is NOT shown
+        for row in range(self.proxy.rowCount()):
+            index = self.proxy.index(row, 0)
+            name = self.proxy.data(index, NameRole)
+            self.assertNotEqual(
+                name,
+                "Multi-Subtype Style 2",
+                "Resource with no matching subtypes should be hidden",
+            )
 
 
 class TestFilterProxyEdgeCases(unittest.TestCase):

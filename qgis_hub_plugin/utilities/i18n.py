@@ -1,4 +1,5 @@
 """Functions to translate a word or to get the locale."""
+
 # Taken from https://github.com/inasafe/inasafe/blob/develop/safe/utilities/i18n.py
 
 
