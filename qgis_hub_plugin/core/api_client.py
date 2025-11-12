@@ -8,8 +8,9 @@ from qgis_hub_plugin.utilities.exception import DownloadError
 
 BASE_URL = "https://hub.qgis.org/api/v1/resources/"
 API_UNAVAILABLE_MESSAGE = (
-    f"Unable to reach the QGIS Hub API. "
-    f"Please check the QGIS Hub API status and try again. ({BASE_URL})"
+    "Unable to reach the QGIS Hub API. "
+    "Please check the QGIS Hub API status and try again. "
+    f'(<a href="{BASE_URL}">{BASE_URL}</a>)'
 )
 
 
