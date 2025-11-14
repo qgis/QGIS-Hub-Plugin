@@ -22,6 +22,8 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
+from qgis_hub_plugin.utilities.exception import DownloadError
+
 
 class TestApiClientMocked(unittest.TestCase):
     """Test API client with mocked dependencies."""
@@ -174,7 +176,10 @@ class TestApiClientMocked(unittest.TestCase):
         self, mock_file, mock_exists, mock_qgs_app
     ):
         """Test handling of corrupted cache file."""
-        from qgis_hub_plugin.core.api_client import get_all_resources
+        from qgis_hub_plugin.core.api_client import (
+            API_UNAVAILABLE_MESSAGE,
+            get_all_resources,
+        )
 
         # Setup mock paths
         mock_qgs_app.qgisSettingsDirPath.return_value = "/tmp/qgis_test"
@@ -185,9 +190,30 @@ class TestApiClientMocked(unittest.TestCase):
             "{ invalid json"
         )
 
-        # Should raise JSONDecodeError
-        with self.assertRaises(json.JSONDecodeError):
+        # Should raise DownloadError with user-friendly message
+        with self.assertRaises(DownloadError) as ctx:
             get_all_resources(force_update=False)
+        self.assertEqual(str(ctx.exception), API_UNAVAILABLE_MESSAGE)
+
+    @patch("qgis_hub_plugin.core.api_client.QgsApplication")
+    @patch("qgis_hub_plugin.core.api_client.download_file")
+    @patch("pathlib.Path.exists")
+    def test_get_all_resources_download_error_user_message(
+        self, mock_exists, mock_download, mock_qgs_app
+    ):
+        from qgis_hub_plugin.core.api_client import (
+            API_UNAVAILABLE_MESSAGE,
+            get_all_resources,
+        )
+
+        mock_qgs_app.qgisSettingsDirPath.return_value = "/tmp/qgis_test"
+        mock_exists.return_value = False
+        mock_download.side_effect = DownloadError("File not found (404 error)")
+
+        with self.assertRaises(DownloadError) as ctx:
+            get_all_resources(force_update=True)
+
+        self.assertEqual(str(ctx.exception), API_UNAVAILABLE_MESSAGE)
 
 
 @pytest.mark.parametrize(
