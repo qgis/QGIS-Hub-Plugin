@@ -17,6 +17,7 @@ env:
 
 jobs:
   tests-unit:
+    name: Unit Tests (No QGIS)
     runs-on: ubuntu-latest
 
     steps:
@@ -36,41 +37,57 @@ jobs:
           python -m pip install -U -r requirements/testing.txt
 
       - name: Run Unit tests
-        run: pytest tests/unit/
+        run: |
+          pytest tests/unit/ -v --cov=qgis_hub_plugin --cov-report=xml --cov-report=term
 
-  # NOTE(IS): Disable this because it has a problem
-  # test-qgis:
-  #   runs-on: ubuntu-latest
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: success()
+        with:
+          files: ./coverage.xml
+          flags: unit
+          fail_ci_if_error: false
 
-  #   container:
-  #     image: qgis/qgis:release-3_28
-  #     env:
-  #       CI: true
-  #       DISPLAY: ":99"
-  #       MUTE_LOGS: true
-  #       NO_MODALS: 1
-  #       PYTHONPATH: "/usr/share/qgis/python/plugins:/usr/share/qgis/python:."
-  #       WITH_PYTHON_PEP: false
-  #     options: -v ${{ github.workspace }}:/tests_directory
+  tests-qgis:
+    name: Integration Tests (QGIS)
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Get source code
-  #       uses: actions/checkout@v4
+    container:
+      image: qgis/qgis:release-3_34
+      options: --user root
 
-  #     - name: Print QGIS version
-  #       run: qgis --version
+    env:
+      CI: true
+      QT_QPA_PLATFORM: offscreen
+      QGIS_PREFIX_PATH: /usr
+      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python
 
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ env.PYTHON_VERSION }}
-  #         cache: "pip"
-  #         cache-dependency-path: "requirements/testing.txt"
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
 
-  #     - name: Install Python requirements
-  #       run: |
-  #         python3 -m pip install -U pip setuptools wheel
-  #         python3 -m pip install -U -r requirements/testing.txt
+      - name: Print QGIS version
+        run: |
+          qgis --version
+          python3 --version
 
-  #     - name: Run Unit tests
-  #       run: pytest tests/qgis/
+      - name: Install Python requirements
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install -r requirements/testing.txt
+
+      - name: Verify QGIS Python is available
+        run: |
+          python3 -c "from qgis.core import QgsApplication; print('✓ QGIS Python available')"
+
+      - name: Run QGIS tests
+        run: |
+          python3 -m pytest tests/ -v --cov=qgis_hub_plugin --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: success()
+        with:
+          files: ./coverage.xml
+          flags: integration
+          fail_ci_if_error: false

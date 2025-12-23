@@ -9,7 +9,11 @@ from qgis_hub_plugin.gui.constants import (
     ResourceTypeRole,
     SortingRole,
 )
-from qgis_hub_plugin.utilities.common import download_resource_thumbnail, get_icon
+from qgis_hub_plugin.utilities.common import (
+    download_resource_thumbnail,
+    get_icon,
+    normalize_resource_subtypes,
+)
 
 
 class ResourceItem(QStandardItem):
@@ -18,11 +22,22 @@ class ResourceItem(QStandardItem):
 
         # Attribute from the QGIS Hub
         self.resource_type = params.get("resource_type")
-        self.resource_subtype = params.get("resource_subtype", "")
+
+        # Handle both old (resource_subtype string) and new (resource_subtypes array) formats
+        self.resource_subtypes = normalize_resource_subtypes(params)
+
+        # Keep backward compatibility - resource_subtype as the first subtype or empty string
+        self.resource_subtype = (
+            self.resource_subtypes[0] if self.resource_subtypes else ""
+        )
+
         self.uuid = params.get("uuid")
         self.name = params.get("name").strip()
         self.creator = params.get("creator").strip()
         upload_date_string = params.get("upload_date")
+        # Replace 'Z' with '+00:00' for Python < 3.11 compatibility
+        if upload_date_string.endswith("Z"):
+            upload_date_string = upload_date_string[:-1] + "+00:00"
         self.upload_date = datetime.fromisoformat(upload_date_string)
         self.download_count = params.get("download_count")
         self.description = params.get("description")
@@ -42,7 +57,8 @@ class ResourceItem(QStandardItem):
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
         self.setData(self.creator, CreatorRole)
-        self.setData(self.resource_subtype, ResourceSubtypeRole)
+        # Store subtypes as list in the role for filtering
+        self.setData(self.resource_subtypes, ResourceSubtypeRole)
 
 
 class AttributeSortingItem(QStandardItem):
