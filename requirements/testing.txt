@@ -1,7 +1,7 @@
 # Testing dependencies
 # --------------------
 
-pytest-cov>=3,<5
+pytest-cov>=3,<8
 pytest-mock>=3.10,<4
 packaging>=23
 
