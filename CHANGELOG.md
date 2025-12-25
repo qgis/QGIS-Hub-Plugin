@@ -16,7 +16,36 @@ Unreleased
 
 -->
 
-## 0.4.1 - 2025-06-11
+## 0.5.0 - 2025-12-25
+
+### Added
+
+- Added screenshot resource type support
+- Added comprehensive test suite with mock API responses
+- Added GUI behavior tests for resource browser
+- Added tests for resource tree filtering, preview, and download functionality
+- Added comprehensive tests for multiple subtypes support
+- Set up development environment with virtual environment
+
+### Changed
+
+- Improved error handling for invalid QGIS Hub API responses
+- Made resource URL clickable in API error messages
+- Implemented support for multiple subtypes in API response handling
+- Refactored normalize_resource_subtypes helper to reduce code duplication
+- Save processing scripts in default folder and keep file on load error
+- Configured CI/CD to run QGIS integration tests in Docker container
+- Simplified test structure: moved all QGIS-dependent tests to tests/qgis/
+- Enabled unit tests to run without QGIS via conditional imports
+
+### Fixed
+
+- Fixed datetime parsing for Python < 3.11 compatibility
+- Fixed file dialog from appearing during download tests
+- Fixed unit tests: Use real QIcon objects instead of MagicMock
+- Fixed integration tests and added comprehensive testing documentation
+
+## 0.4.1 - 2025-12-25
 
 ### Fixed
 
