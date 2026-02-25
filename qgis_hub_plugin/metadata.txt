@@ -18,7 +18,8 @@ tracker=https://github.com/qgis/QGIS-Hub-Plugin/issues
 deprecated=False
 experimental=False
 qgisMinimumVersion=3.28
-qgisMaximumVersion=3.99
+qgisMaximumVersion=4.99
+supportsQt6=True
 
 # versioning
 version=0.5.0

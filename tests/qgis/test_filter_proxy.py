@@ -17,7 +17,7 @@ Usage from the repo root folder:
 
 import unittest
 
-from qgis.PyQt.QtCore import QRegExp, Qt
+from qgis.PyQt.QtCore import QRegularExpression, Qt
 from qgis.PyQt.QtGui import QStandardItem, QStandardItemModel
 from qgis.testing import start_app
 
@@ -129,7 +129,7 @@ class TestFilterProxyModel(unittest.TestCase):
         self.proxy.setRolesToFilter([NameRole])
 
         # Search for "Model"
-        self.proxy.setFilterRegExp(QRegExp(".*Model.*"))
+        self.proxy.setFilterRegularExpression(QRegularExpression(".*Model.*"))
 
         # Should show 2 models
         self.assertEqual(self.proxy.rowCount(), 2)
@@ -142,7 +142,7 @@ class TestFilterProxyModel(unittest.TestCase):
         self.proxy.setRolesToFilter([CreatorRole])
 
         # Search for "Creator A"
-        self.proxy.setFilterRegExp(QRegExp("Creator A"))
+        self.proxy.setFilterRegularExpression(QRegularExpression("Creator A"))
 
         # Should show 2 items by Creator A
         self.assertEqual(self.proxy.rowCount(), 2)
@@ -154,7 +154,7 @@ class TestFilterProxyModel(unittest.TestCase):
         self.proxy.setRolesToFilter([NameRole])
 
         # Search for "1"
-        self.proxy.setFilterRegExp(QRegExp(".*1"))
+        self.proxy.setFilterRegularExpression(QRegularExpression(".*1"))
 
         # Should show only "Processing Model 1"
         self.assertEqual(self.proxy.rowCount(), 1)
@@ -169,7 +169,7 @@ class TestFilterProxyModel(unittest.TestCase):
         self.proxy.setRolesToFilter([NameRole])
 
         # Search for something that doesn't exist
-        self.proxy.setFilterRegExp(QRegExp("NonExistentResource"))
+        self.proxy.setFilterRegularExpression(QRegularExpression("NonExistentResource"))
 
         # Should show 0 items
         self.assertEqual(self.proxy.rowCount(), 0)
@@ -218,8 +218,10 @@ class TestFilterProxyModel(unittest.TestCase):
         self.proxy.setRolesToFilter([NameRole])
 
         # Search with different case
-        regex = QRegExp(".*python.*", Qt.CaseInsensitive)
-        self.proxy.setFilterRegExp(regex)
+        regex = QRegularExpression(
+            ".*python.*", QRegularExpression.PatternOption.CaseInsensitiveOption
+        )
+        self.proxy.setFilterRegularExpression(regex)
 
         # Should match "Python Script 1"
         self.assertEqual(self.proxy.rowCount(), 1)
@@ -233,7 +235,7 @@ class TestFilterProxyModel(unittest.TestCase):
         self.proxy.setRolesToFilter([NameRole, CreatorRole])
 
         # Search for "Creator A" - should match in creator role
-        self.proxy.setFilterRegExp(QRegExp("Creator A"))
+        self.proxy.setFilterRegularExpression(QRegularExpression("Creator A"))
 
         # Should show 2 items by Creator A
         self.assertEqual(self.proxy.rowCount(), 2)

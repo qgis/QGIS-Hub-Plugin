@@ -14,7 +14,7 @@ from qgis_hub_plugin.utilities.exception import DownloadError
 QGIS_HUB_DIR = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
 
 
-def normalize_resource_subtypes(resource_data: dict) -> List[str]:
+def normalize_resource_subtypes(resource_data: dict) -> list[str]:
     """
     Normalize resource subtypes from API response to a list format.
 
@@ -85,9 +85,9 @@ def download_file(
     request.setTransferTimeout(timeout)
 
     def handle_finished(reply: QgsNetworkReplyContent):
-        if reply.error() == QNetworkReply.NoError:
+        if reply.error() == QNetworkReply.NetworkError.NoError:
             file = QFile(str(destination))
-            if file.open(QIODevice.WriteOnly):
+            if file.open(QIODevice.OpenModeFlag.WriteOnly):
                 file.write(reply.readAll())
                 file.close()
                 return destination
@@ -95,7 +95,7 @@ def download_file(
                 raise DownloadError(
                     f"Failed to open file for writing: {file.errorString()}"
                 )
-        elif reply.error() == QNetworkReply.ContentNotFoundError:
+        elif reply.error() == QNetworkReply.NetworkError.ContentNotFoundError:
             raise DownloadError(f"File not found (404 error): {url}")
         else:
             raise DownloadError(f"Download failed: {reply.errorString()}")

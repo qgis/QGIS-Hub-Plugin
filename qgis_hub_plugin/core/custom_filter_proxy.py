@@ -82,7 +82,7 @@ class MultiRoleFilterProxyModel(QSortFilterProxyModel):
         # Text search filtering
         for role in self.roles_to_filter:
             data = model.data(index, role)
-            if data and self.filterRegExp().indexIn(str(data)) != -1:
+            if data and self.filterRegularExpression().match(str(data)).hasMatch():
                 return True
 
         # If we're filtering by roles and nothing matched, hide the item
