@@ -200,7 +200,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         progress = QProgressBar()
         progress.setMaximum(total)
         progress.setValue(0)
-        progress.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        progress.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
         widget.layout().addWidget(progress)
         message_bar.pushWidget(widget, Qgis.Info)
         return progress, widget
