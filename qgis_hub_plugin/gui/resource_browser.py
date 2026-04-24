@@ -18,7 +18,7 @@ from qgis.PyQt import uic
 from qgis.PyQt.QtCore import (
     QByteArray,
     QItemSelectionModel,
-    QRegExp,
+    QRegularExpression,
     QSize,
     Qt,
     QUrl,
@@ -93,7 +93,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Message bar
         self.message_bar = QgsMessageBar(self)
-        self.message_bar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.message_bar.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
+        )
         self.vlayout.insertWidget(0, self.message_bar)
 
         # Resources
@@ -342,14 +344,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if checked:
                 filter_regexp_parts.append(resource_type)
 
-        filter_regexp = QRegExp("|".join(filter_regexp_parts), Qt.CaseInsensitive)
-        self.proxy_model.setFilterRegExp(filter_regexp)
+        filter_regexp = QRegularExpression(
+            "|".join(filter_regexp_parts),
+            QRegularExpression.PatternOption.CaseInsensitiveOption,
+        )
+        self.proxy_model.setFilterRegularExpression(filter_regexp)
         self.proxy_model.setRolesToFilter([ResourceTypeRole])
         self.proxy_model.setCheckboxStates(self.filter_states)
         self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
-        self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
+        self.proxy_model.setFilterRegularExpression(
+            QRegularExpression(
+                text, QRegularExpression.PatternOption.CaseInsensitiveOption
+            )
+        )
         self.proxy_model.setRolesToFilter([NameRole, CreatorRole])
         self.proxy_model.setCheckboxStates(self.filter_states)
 
