@@ -776,6 +776,24 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     )
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
+                except ModuleNotFoundError as exc:
+                    if exc.name == "PyQt5":
+                        self.show_error_message(
+                            self.tr(
+                                f"Script “{resource.name}” was written for "
+                                "QGIS 3 (PyQt5) and is not compatible with "
+                                "this QGIS version (PyQt6). The script was "
+                                f"saved to {file_path} but cannot be loaded "
+                                "until it is updated to import from qgis.PyQt."
+                            )
+                        )
+                    else:
+                        self.show_error_message(
+                            self.tr(
+                                f"Script downloaded to {file_path}, "
+                                f"but a required module is missing:\n{exc}"
+                            )
+                        )
                 except Exception as exc:  # noqa: BLE001
                     self.show_error_message(
                         self.tr(
@@ -849,6 +867,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def update_icon_size(self, size):
         self.listViewResources.setIconSize(QSize(size, size))
+        self.listViewResources.setGridSize(QSize(size + 20, size + 40))
 
     def setup_resource_type_tree(self):
         """
