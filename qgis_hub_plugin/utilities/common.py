@@ -1,6 +1,7 @@
 import os
+import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from qgis.core import QgsApplication, QgsNetworkAccessManager, QgsNetworkReplyContent
 from qgis.PyQt.QtCore import QFile, QIODevice, QUrl
@@ -113,6 +114,46 @@ def download_file(
             raise e
         else:
             raise DownloadError(f"An unexpected error occurred: {str(e)}")
+
+
+def clear_cache() -> tuple[bool, int]:
+    """Delete the cached API response and all cached thumbnails.
+
+    Returns:
+        Tuple[bool, int]: (response_file_removed, number_of_thumbnails_removed).
+    """
+    response_removed = False
+    response_file = Path(QGIS_HUB_DIR, "response.json")
+    if response_file.exists():
+        response_file.unlink()
+        response_removed = True
+
+    thumbnails_removed = 0
+    thumbnail_dir = Path(QGIS_HUB_DIR, "thumbnails")
+    if thumbnail_dir.exists():
+        thumbnails_removed = sum(1 for _ in thumbnail_dir.iterdir() if _.is_file())
+        shutil.rmtree(thumbnail_dir)
+
+    return response_removed, thumbnails_removed
+
+
+def resource_thumbnail_cache_path(url: str, uuid: str) -> Optional[Path]:
+    """Return the expected on-disk cache path for a resource thumbnail, or
+    None if the resource has no downloadable thumbnail (missing URL or the
+    default QGIS Hub icon)."""
+    if not url or url.endswith("qgis-icon-32x32.png"):
+        return None
+    extension = "jpg"
+    try:
+        extension = url.split(".")[-1]
+    except IndexError:
+        pass
+    return Path(QGIS_HUB_DIR, "thumbnails", f"{uuid}.{extension}")
+
+
+def is_resource_thumbnail_cached(url: str, uuid: str) -> bool:
+    path = resource_thumbnail_cache_path(url, uuid)
+    return path is not None and path.exists()
 
 
 # If not able to download or not found, set the thumbnail to the default one

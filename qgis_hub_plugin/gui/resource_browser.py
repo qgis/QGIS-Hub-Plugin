@@ -32,6 +32,7 @@ from qgis.PyQt.QtWidgets import (
     QFormLayout,
     QGraphicsPixmapItem,
     QGraphicsScene,
+    QProgressBar,
     QSizePolicy,
     QTreeWidgetItem,
 )
@@ -53,6 +54,7 @@ from qgis_hub_plugin.utilities.common import (
     QGIS_HUB_DIR,
     download_file,
     download_resource_thumbnail,
+    is_resource_thumbnail_cached,
     normalize_resource_subtypes,
 )
 from qgis_hub_plugin.utilities.exception import DownloadError
@@ -182,6 +184,32 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     def show_warning_message(self, text):
         return self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
 
+    def _start_thumbnail_progress(self, total):
+        """Show a progress bar in the QGIS main message bar for the initial
+        thumbnail download. Returns (progress_bar, progress_widget) or
+        (None, None) when no progress should be shown (no iface or nothing
+        to download)."""
+        if total <= 0 or self.iface is None:
+            return None, None
+
+        message_bar = self.iface.messageBar()
+        widget = message_bar.createMessage(
+            self.tr("QGIS Hub"),
+            self.tr("Downloading {n} thumbnails…").format(n=total),
+        )
+        progress = QProgressBar()
+        progress.setMaximum(total)
+        progress.setValue(0)
+        progress.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        widget.layout().addWidget(progress)
+        message_bar.pushWidget(widget, Qgis.Info)
+        return progress, widget
+
+    def _finish_thumbnail_progress(self, widget):
+        if widget is None or self.iface is None:
+            return
+        self.iface.messageBar().popWidget(widget)
+
     def store_setting(self):
         # Download directory check box
         self.plg_settings.set_value_from_key(
@@ -254,7 +282,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.resource_model.setHorizontalHeaderLabels(
             ["Name", "Creator", "Download", "Uploaded"]
         )
+
+        missing_thumbnail_uuids = {
+            r.get("uuid")
+            for r in self.resources
+            if r.get("thumbnail")
+            and not r.get("thumbnail").endswith("qgis-icon-32x32.png")
+            and not is_resource_thumbnail_cached(r.get("thumbnail"), r.get("uuid"))
+        }
+        progress_bar, progress_widget = self._start_thumbnail_progress(
+            len(missing_thumbnail_uuids)
+        )
+        downloaded = 0
+
         for resource in self.resources:
+            needs_download = resource.get("uuid") in missing_thumbnail_uuids
             item = ResourceItem(resource)
             author = QStandardItem(item.creator)
             download_count = AttributeSortingItem(
@@ -263,6 +305,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             pretty_date = item.upload_date.strftime("%d %B %Y").lstrip("0")
             upload_date = AttributeSortingItem(pretty_date, item.upload_date)
             self.resource_model.appendRow([item, author, download_count, upload_date])
+
+            if progress_bar is not None and needs_download:
+                downloaded += 1
+                progress_bar.setValue(downloaded)
+                QgsApplication.processEvents()
+
+        self._finish_thumbnail_progress(progress_widget)
 
         if force_update:
             self.show_success_message("Successfully update the resources")

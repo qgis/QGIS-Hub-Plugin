@@ -14,6 +14,7 @@ from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QUrl
 from qgis.PyQt.QtGui import QDesktopServices, QIcon
+from qgis.PyQt.QtWidgets import QMessageBox
 
 # project
 from qgis_hub_plugin.__about__ import (
@@ -25,6 +26,7 @@ from qgis_hub_plugin.__about__ import (
 )
 from qgis_hub_plugin.toolbelt import PlgLogger, PlgOptionsManager
 from qgis_hub_plugin.toolbelt.preferences import PlgSettingsStructure
+from qgis_hub_plugin.utilities.common import clear_cache
 
 # ############################################################################
 # ########## Globals ###############
@@ -69,6 +71,11 @@ class ConfigOptionsPage(FORM_CLASS, QgsOptionsPageWidget):
         self.btn_reset.setIcon(QIcon(QgsApplication.iconPath("mActionUndo.svg")))
         self.btn_reset.pressed.connect(self.reset_settings)
 
+        self.btn_clear_cache.setIcon(
+            QIcon(QgsApplication.iconPath("mActionDeleteSelected.svg"))
+        )
+        self.btn_clear_cache.pressed.connect(self.clear_cache)
+
         # load previously saved settings
         self.load_settings()
 
@@ -98,6 +105,44 @@ class ConfigOptionsPage(FORM_CLASS, QgsOptionsPageWidget):
         # global
         self.opt_debug.setChecked(settings.debug_mode)
         self.lbl_version_saved_value.setText(settings.version)
+
+    def clear_cache(self):
+        """Delete the cached API response and all cached thumbnails."""
+        confirm = QMessageBox.question(
+            self,
+            self.tr("Clear QGIS Hub cache"),
+            self.tr(
+                "This will delete the cached resource list and all downloaded "
+                "thumbnails. They will be re-downloaded the next time you open "
+                "the resource browser.\n\nContinue?"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            response_removed, thumbnails_removed = clear_cache()
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                self.tr("Clear QGIS Hub cache"),
+                self.tr("Failed to clear cache: {err}").format(err=exc),
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            self.tr("Clear QGIS Hub cache"),
+            self.tr(
+                "Cache cleared.\n\nResource list removed: {resp}\n"
+                "Thumbnails removed: {n}"
+            ).format(
+                resp=self.tr("yes") if response_removed else self.tr("no"),
+                n=thumbnails_removed,
+            ),
+        )
 
     def reset_settings(self):
         """Reset settings to default values (set in preferences.py module)."""
