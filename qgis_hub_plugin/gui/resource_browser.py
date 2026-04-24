@@ -120,7 +120,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.populate_resources()
 
         # Tooltip
-        self.buttonBox.button(QDialogButtonBox.Help).setToolTip(
+        self.buttonBox.button(QDialogButtonBox.StandardButton.Help).setToolTip(
             self.tr("Open the help page")
         )
         self.listViewToolButton.setToolTip(self.tr("List view"))
@@ -153,7 +153,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.addQGISPushButton.clicked.connect(self.add_resource_to_qgis)
         self.listViewToolButton.toggled.connect(self.show_list_view)
         self.iconViewToolButton.toggled.connect(self.show_icon_view)
-        self.buttonBox.button(QDialogButtonBox.Help).clicked.connect(
+        self.buttonBox.button(QDialogButtonBox.StandardButton.Help).clicked.connect(
             partial(QDesktopServices.openUrl, QUrl(__uri_homepage__))
         )
         self.reloadPushButton.clicked.connect(
@@ -283,7 +283,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         selected_data = None
 
         if selected_items:
-            selected_data = selected_items[0].data(0, Qt.UserRole)
+            selected_data = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
 
         # Default to all types selected if nothing is selected or "all" is selected
         is_all_selected = not selected_data or selected_data == "all"
@@ -444,7 +444,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
             self.graphicsViewPreview.scene().clear()
             self.graphicsViewPreview.scene().addItem(item)
-            self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
+            self.graphicsViewPreview.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
 
         # Description
         self.labelName.setText(resource.name)
@@ -869,7 +869,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         all_types_item = QTreeWidgetItem(
             self.treeWidgetCategories, [f"All Types ({total_resources})"]
         )
-        all_types_item.setData(0, Qt.UserRole, "all")
+        all_types_item.setData(0, Qt.ItemDataRole.UserRole, "all")
         all_types_item.setExpanded(True)
         # Make "All Types" bold
         font = all_types_item.font(0)
@@ -909,7 +909,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 category_item = QTreeWidgetItem(
                     all_types_item, [f"{category_name} ({category_count})"]
                 )
-                category_item.setData(0, Qt.UserRole, types)
+                category_item.setData(0, Qt.ItemDataRole.UserRole, types)
                 # Make category names bold
                 font = category_item.font(0)
                 font.setBold(True)
@@ -946,7 +946,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                             ],  # Assuming one type per category for simplicity
                             "subtype": subtype,
                         }
-                        subtype_item.setData(0, Qt.UserRole, subtype_data)
+                        subtype_item.setData(0, Qt.ItemDataRole.UserRole, subtype_data)
 
                         # Add the subtype to the tree_items dictionary for later reference
                         self.tree_items[f"{category_name}:{subtype}"] = subtype_item
@@ -958,7 +958,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             category_item = QTreeWidgetItem(
                 all_types_item, [f"{category_name} ({count})"]
             )
-            category_item.setData(0, Qt.UserRole, [unknown_type])
+            category_item.setData(0, Qt.ItemDataRole.UserRole, [unknown_type])
             # Make dynamic category names bold
             font = category_item.font(0)
             font.setBold(True)
@@ -990,7 +990,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
                     # Store the resource type and subtype for filtering
                     subtype_data = {"type": unknown_type, "subtype": subtype}
-                    subtype_item.setData(0, Qt.UserRole, subtype_data)
+                    subtype_item.setData(0, Qt.ItemDataRole.UserRole, subtype_data)
 
                     # Add the subtype to the tree_items dictionary
                     self.tree_items[f"{category_name}:{subtype}"] = subtype_item
@@ -1147,10 +1147,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Find the row for the previousLabel in the layout
         row = -1  # Default to -1 if the label is not found
         for i in range(layout.rowCount()):
-            layoutItem_label = layout.itemAt(i, QFormLayout.LabelRole)
+            layoutItem_label = layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
             if not layoutItem_label:
                 continue
-            label_widget = layout.itemAt(i, QFormLayout.LabelRole).widget()
+            label_widget = layout.itemAt(i, QFormLayout.ItemRole.LabelRole).widget()
             if label_widget == previousLabel:
                 row = i
                 break
