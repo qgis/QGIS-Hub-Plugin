@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 from qgis.core import QgsApplication, QgsNetworkAccessManager, QgsNetworkReplyContent
 from qgis.PyQt.QtCore import QFile, QIODevice, QUrl
-from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtGui import QIcon, QImageReader
 from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgis_hub_plugin.__about__ import DIR_PLUGIN_ROOT
@@ -13,6 +13,22 @@ from qgis_hub_plugin.toolbelt import PlgLogger
 from qgis_hub_plugin.utilities.exception import DownloadError
 
 QGIS_HUB_DIR = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
+
+# Image formats Qt can decode in this QGIS install (e.g. {"jpg", "png", "webp"}).
+# Qt5 ships the webp plugin; Qt6 may not. Computed once at import time so we
+# don't probe every thumbnail file on disk.
+_QT_SUPPORTED_IMAGE_FORMATS = {
+    bytes(fmt).decode("ascii").lower() for fmt in QImageReader.supportedImageFormats()
+}
+
+
+def _qt_can_decode(extension: str) -> bool:
+    ext = extension.lower().lstrip(".")
+    if ext == "jpg":
+        ext = "jpeg"
+    return ext in _QT_SUPPORTED_IMAGE_FORMATS or (
+        ext == "jpeg" and "jpg" in _QT_SUPPORTED_IMAGE_FORMATS
+    )
 
 
 def normalize_resource_subtypes(resource_data: dict) -> list[str]:
@@ -179,7 +195,41 @@ def download_resource_thumbnail(url: str, uuid: str) -> Path:
         thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
     status = download_file(url, thumbnail_path, False)
-    if status and thumbnail_path.exists():
-        return thumbnail_path
-    else:
+    if not (status and thumbnail_path.exists()):
         return Path(get_icon_path("QGIS_Hub_icon.svg"))
+
+    # Qt5 ships the webp image-format plugin, so this branch was a no-op
+    # in QGIS 3. Qt6 in QGIS 4 may lack it: when Qt cannot decode this
+    # extension, fall back to a one-shot Pillow conversion to PNG. The
+    # PNG sibling is reused on subsequent calls so we never re-decode.
+    if _qt_can_decode(extension):
+        return thumbnail_path
+
+    png_path = thumbnail_path.with_suffix(".png")
+    if png_path.exists() and png_path.stat().st_size > 0:
+        return png_path
+
+    converted = _convert_thumbnail_to_png(thumbnail_path, png_path)
+    if converted is not None:
+        return converted
+    return Path(get_icon_path("QGIS_Hub_icon.svg"))
+
+
+def _convert_thumbnail_to_png(source: Path, target: Path) -> Optional[Path]:
+    try:
+        from PIL import Image
+    except ImportError:
+        PlgLogger.log(
+            f"Cannot decode {source.name} and Pillow is unavailable for conversion."
+        )
+        return None
+    try:
+        with Image.open(source) as img:
+            # Cap to a sensible thumbnail size so conversion stays fast even
+            # when the source is a full-resolution screenshot/map preview.
+            img.thumbnail((512, 512))
+            img.convert("RGBA").save(target, format="PNG", optimize=True)
+        return target
+    except Exception as exc:  # noqa: BLE001
+        PlgLogger.log(f"Failed to convert thumbnail {source.name}: {exc}")
+        return None
