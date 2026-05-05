@@ -14,15 +14,25 @@ from qgis_hub_plugin.utilities.exception import DownloadError
 
 QGIS_HUB_DIR = Path(QgsApplication.qgisSettingsDirPath(), "qgis_hub")
 
-# Image formats Qt can decode in this QGIS install (e.g. {"jpg", "png", "webp"}).
-# Qt5 ships the webp plugin; Qt6 may not. Computed once at import time so we
-# don't probe every thumbnail file on disk.
+# Image formats Qt can decode in this build (e.g. {"jpg", "png", "webp"}).
+# Qt5 ships the webp plugin; Qt6 in QGIS 4 does NOT include it.
+# Computed once at import time to avoid probing on every thumbnail.
 _QT_SUPPORTED_IMAGE_FORMATS = {
     bytes(fmt).decode("ascii").lower() for fmt in QImageReader.supportedImageFormats()
 }
 
+# Pillow is an optional dependency used to convert image formats that Qt
+# cannot decode (e.g. webp on Qt6). Detected once at import time.
+try:
+    from PIL import Image as _PILImage
+
+    HAS_PILLOW = True
+except ImportError:
+    HAS_PILLOW = False
+
 
 def _qt_can_decode(extension: str) -> bool:
+    """Check whether Qt can natively decode the given image extension."""
     ext = extension.lower().lstrip(".")
     if ext == "jpg":
         ext = "jpeg"
@@ -53,16 +63,12 @@ def normalize_resource_subtypes(resource_data: dict) -> list[str]:
         >>> normalize_resource_subtypes({"resource_subtype": ""})
         []
     """
-    # Handle new API format (resource_subtypes array)
     if "resource_subtypes" in resource_data:
         subtypes = resource_data.get("resource_subtypes", [])
-        # Ensure it's a list
         if isinstance(subtypes, list):
             return subtypes
-        # Handle edge case where it might be a single value
         return [subtypes] if subtypes else []
 
-    # Handle old API format (resource_subtype string)
     subtype = resource_data.get("resource_subtype", "")
     return [subtype] if subtype else []
 
@@ -172,18 +178,14 @@ def is_resource_thumbnail_cached(url: str, uuid: str) -> bool:
     return path is not None and path.exists()
 
 
-# If not able to download or not found, set the thumbnail to the default one
 def download_resource_thumbnail(url: str, uuid: str) -> Path:
     if not url:
         PlgLogger.log(f"UUID: {uuid} has URL == None: {url}")
         return Path(get_icon_path("QGIS_Hub_icon.svg"))
-    # If the URL is the default QGIS Hub icon, return the default icon.
-    # Because it is not a thumbnail and it is too small
     if url.endswith("qgis-icon-32x32.png"):
         return Path(get_icon_path("QGIS_Hub_icon.svg"))
 
-    # Assume it as jpg
-    extension = ".jpg"
+    extension = "jpg"
     try:
         extension = url.split(".")[-1]
     except IndexError as e:
@@ -198,12 +200,19 @@ def download_resource_thumbnail(url: str, uuid: str) -> Path:
     if not (status and thumbnail_path.exists()):
         return Path(get_icon_path("QGIS_Hub_icon.svg"))
 
-    # Qt5 ships the webp image-format plugin, so this branch was a no-op
-    # in QGIS 3. Qt6 in QGIS 4 may lack it: when Qt cannot decode this
-    # extension, fall back to a one-shot Pillow conversion to PNG. The
-    # PNG sibling is reused on subsequent calls so we never re-decode.
+    # Qt5 ships the webp image-format plugin so thumbnails rendered directly.
+    # Qt6 in QGIS 4 does NOT include webp support (confirmed by testing).
+    # When Qt cannot decode the format, fall back to a one-shot Pillow
+    # conversion to PNG. The PNG sibling is reused on subsequent calls.
     if _qt_can_decode(extension):
         return thumbnail_path
+
+    if not HAS_PILLOW:
+        PlgLogger.log(
+            f"Qt cannot decode .{extension} and Pillow is not installed. "
+            "Install Pillow (`pip install Pillow`) to display webp thumbnails."
+        )
+        return Path(get_icon_path("QGIS_Hub_icon.svg"))
 
     png_path = thumbnail_path.with_suffix(".png")
     if png_path.exists() and png_path.stat().st_size > 0:
@@ -216,17 +225,12 @@ def download_resource_thumbnail(url: str, uuid: str) -> Path:
 
 
 def _convert_thumbnail_to_png(source: Path, target: Path) -> Optional[Path]:
+    """Convert a thumbnail to PNG using Pillow.
+
+    Only called when HAS_PILLOW is True, so the import is guaranteed to succeed.
+    """
     try:
-        from PIL import Image
-    except ImportError:
-        PlgLogger.log(
-            f"Cannot decode {source.name} and Pillow is unavailable for conversion."
-        )
-        return None
-    try:
-        with Image.open(source) as img:
-            # Cap to a sensible thumbnail size so conversion stays fast even
-            # when the source is a full-resolution screenshot/map preview.
+        with _PILImage.open(source) as img:
             img.thumbnail((512, 512))
             img.convert("RGBA").save(target, format="PNG", optimize=True)
         return target

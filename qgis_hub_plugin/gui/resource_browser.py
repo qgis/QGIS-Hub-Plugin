@@ -886,7 +886,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         selected_indexes = self.treeViewResources.selectionModel().selectedIndexes()
         if selected_indexes:
             self.listViewResources.selectionModel().select(
-                selected_indexes[0], QItemSelectionModel.ClearAndSelect
+                selected_indexes[0], QItemSelectionModel.SelectionFlag.ClearAndSelect
             )
             self.listViewResources.setCurrentIndex(selected_indexes[0])
 
@@ -901,7 +901,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
         if selected_indexes:
             self.treeViewResources.selectionModel().select(
-                selected_indexes[0], QItemSelectionModel.ClearAndSelect
+                selected_indexes[0], QItemSelectionModel.SelectionFlag.ClearAndSelect
             )
             self.treeViewResources.setCurrentIndex(selected_indexes[0])
 
