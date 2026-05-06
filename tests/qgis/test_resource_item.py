@@ -21,12 +21,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Try to import QIcon from QGIS for use in mocks
+# Try to import QIcon and ResourceItem from QGIS for use in mocks
 try:
     from qgis.PyQt.QtGui import QIcon
+
+    from qgis_hub_plugin.gui.resource_item import ResourceItem
 except ImportError:
-    # Create a mock QIcon class for when QGIS is not available
+    # Create mock classes for when QGIS is not available
     QIcon = MagicMock
+    ResourceItem = MagicMock
 
 
 class TestResourceItem(unittest.TestCase):
@@ -125,26 +128,24 @@ class TestResourceItem(unittest.TestCase):
         self.assertEqual(item.name, long_name)
 
     @patch("qgis_hub_plugin.gui.resource_item.download_resource_thumbnail")
-    @patch("qgis_hub_plugin.gui.resource_item.QIcon")
-    def test_thumbnail_icon_loading(self, mock_qicon, mock_download_thumb):
-        """Test that thumbnail is loaded when available."""
+    @patch.object(ResourceItem, "_make_uniform_icon", return_value=QIcon())
+    def test_thumbnail_icon_loading(self, mock_make_icon, mock_download_thumb):
+        """Test that thumbnail is downloaded and passed to the icon builder."""
         from pathlib import Path
 
         from qgis_hub_plugin.gui.resource_item import ResourceItem
 
-        # Mock successful thumbnail download
         mock_thumb_path = Path("/tmp/thumb.jpg")
         mock_download_thumb.return_value = mock_thumb_path
-        # Mock QIcon to return a real QIcon object (Qt requires actual QIcon, not MagicMock)
-        mock_qicon.return_value = QIcon()
 
         item = ResourceItem(self.sample_resource)
 
-        # Verify thumbnail was used for icon
+        # Verify thumbnail was downloaded with correct arguments
         mock_download_thumb.assert_called_once_with(
             "https://example.com/thumb.jpg", "test-uuid-123"
         )
-        mock_qicon.assert_called_with(str(mock_thumb_path))
+        # Verify the downloaded path was passed to the icon builder
+        mock_make_icon.assert_called_once_with(mock_thumb_path)
 
     @patch("qgis_hub_plugin.gui.resource_item.download_resource_thumbnail")
     @patch("qgis_hub_plugin.gui.resource_item.get_icon")
