@@ -1,7 +1,7 @@
 # Qt6 / QGIS 4 migration notes
 
 Reference notes for the QGIS 3 / Qt5 → QGIS 4 / Qt6 migration done in
-`v1.0.0`. Future maintainers hitting odd Qt6 behaviour: start here.
+`v0.6.0`. Future maintainers hitting odd Qt6 behaviour: start here.
 
 The plugin supports **both** Qt5 (QGIS 3.28+) and Qt6 (QGIS 4.x) from a
 single codebase. CI runs the integration suite on both `qgis/qgis:release-3_34`
@@ -137,13 +137,12 @@ still saved to disk so the user can edit and re-add it.
 
 ## 8. Things still not working on Qt6
 
-Tracked but not fixed in `v1.0.0`:
+Tracked but not fixed in `v0.6.0`:
 
-- The thumbnail-size slider in the icon view has no effect under Qt6
-  (does not crash; just silently does nothing).
 - PyQt5-only processing scripts cannot be loaded until the upstream
-  script is updated to import from `qgis.PyQt`.
+  script is updated to import from `qgis.PyQt`. The error is surfaced
+  cleanly (see section 7); a real fix would need upstream cooperation
+  from script authors on QGIS Hub.
 
-If you pick either up, the relevant entry points are
-`update_icon_size` and `add_processing_script_to_qgis` in
+The relevant entry point is `add_processing_script_to_qgis` in
 `gui/resource_browser.py`.
