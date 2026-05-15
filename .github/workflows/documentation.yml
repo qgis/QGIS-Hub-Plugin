@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Get source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,7 +46,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache Sphinx cache
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: docs/_build/cache
           key: ${{ runner.os }}-sphinx-${{ hashFiles('docs/**/*') }}
@@ -62,7 +62,7 @@ jobs:
         run: sphinx-build -b html -j auto -d docs/_build/cache -q docs docs/_build/html
 
       - name: Save build doc as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: documentation
           path: docs/_build/html/*
@@ -70,11 +70,11 @@ jobs:
           retention-days: 30
 
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v5
         if: ${{ github.event_name == 'push' && ( startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' ) }}
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         if: ${{ github.event_name == 'push' && ( startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' ) }}
         with:
           # Upload entire repository
