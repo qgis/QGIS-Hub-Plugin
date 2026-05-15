@@ -170,6 +170,28 @@
                             </widget>
                         </item>
                         <item row="3" column="0" colspan="2">
+                            <widget class="QPushButton" name="btn_clear_cache">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>25</height>
+                                    </size>
+                                </property>
+                                <property name="maximumSize">
+                                    <size>
+                                        <width>16777215</width>
+                                        <height>30</height>
+                                    </size>
+                                </property>
+                                <property name="toolTip">
+                                    <string>Delete the cached resource list and all downloaded thumbnails.</string>
+                                </property>
+                                <property name="text">
+                                    <string>Clear cache (resources and thumbnails)</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="4" column="0" colspan="2">
                             <widget class="QPushButton" name="btn_reset">
                                 <property name="minimumSize">
                                     <size>

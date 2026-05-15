@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from qgis.PyQt.QtGui import QIcon, QStandardItem
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QIcon, QPainter, QPixmap, QStandardItem
 
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
@@ -20,13 +21,9 @@ class ResourceItem(QStandardItem):
     def __init__(self, params: dict):
         super().__init__()
 
-        # Attribute from the QGIS Hub
         self.resource_type = params.get("resource_type")
-
-        # Handle both old (resource_subtype string) and new (resource_subtypes array) formats
         self.resource_subtypes = normalize_resource_subtypes(params)
-
-        # Keep backward compatibility - resource_subtype as the first subtype or empty string
+        # First subtype kept for backward compatibility
         self.resource_subtype = (
             self.resource_subtypes[0] if self.resource_subtypes else ""
         )
@@ -41,24 +38,54 @@ class ResourceItem(QStandardItem):
         self.upload_date = datetime.fromisoformat(upload_date_string)
         self.download_count = params.get("download_count")
         self.description = params.get("description")
-        self.dependencies = params.get("dependencies")  # Add support for dependencies
+        self.dependencies = params.get("dependencies")
         self.file = params.get("file")
         self.thumbnail = params.get("thumbnail")
 
-        # Custom attribute
         self.setText(self.name[:50] + "..." if len(self.name) > 50 else self.name)
         self.setToolTip(f"{self.name} by {self.creator}")
         thumbnail_path = download_resource_thumbnail(self.thumbnail, self.uuid)
-        if thumbnail_path:
-            self.setIcon(QIcon(str(thumbnail_path)))
-        else:
-            self.setIcon(get_icon("QGIS_Hub_icon.svg"))
+        self.setIcon(self._make_uniform_icon(thumbnail_path))
 
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
         self.setData(self.creator, CreatorRole)
-        # Store subtypes as list in the role for filtering
         self.setData(self.resource_subtypes, ResourceSubtypeRole)
+
+    @staticmethod
+    def _make_uniform_icon(thumbnail_path, target_size=512):
+        """Return a square QIcon for *thumbnail_path*, centered on a transparent canvas.
+
+        Normalises varying thumbnail aspect ratios so every cell in the
+        QListView grid is the same size. Falls back to the default hub icon
+        when the image cannot be loaded.
+        """
+        if not thumbnail_path or thumbnail_path.name == "QGIS_Hub_icon.svg":
+            return get_icon("QGIS_Hub_icon.svg")
+
+        pixmap = QPixmap(str(thumbnail_path))
+        if pixmap.isNull():
+            return get_icon("QGIS_Hub_icon.svg")
+
+        # Scale to fit inside the target square, keeping aspect ratio
+        scaled = pixmap.scaled(
+            target_size,
+            target_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+
+        # Paint centered on a transparent square canvas
+        canvas = QPixmap(target_size, target_size)
+        canvas.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(canvas)
+        x = (target_size - scaled.width()) // 2
+        y = (target_size - scaled.height()) // 2
+        painter.drawPixmap(x, y, scaled)
+        painter.end()
+
+        return QIcon(canvas)
 
 
 class AttributeSortingItem(QStandardItem):

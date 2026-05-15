@@ -1,11 +1,11 @@
 from qgis.PyQt.QtCore import Qt
 
 # Resource Item Data
-ResourceTypeRole = Qt.UserRole + 1
-NameRole = Qt.UserRole + 2
-CreatorRole = Qt.UserRole + 3
-SortingRole = Qt.UserRole + 4
-ResourceSubtypeRole = Qt.UserRole + 5
+ResourceTypeRole = Qt.ItemDataRole.UserRole + 1
+NameRole = Qt.ItemDataRole.UserRole + 2
+CreatorRole = Qt.ItemDataRole.UserRole + 3
+SortingRole = Qt.ItemDataRole.UserRole + 4
+ResourceSubtypeRole = Qt.ItemDataRole.UserRole + 5
 
 
 # Type of resources, based on the QGIS Hub API

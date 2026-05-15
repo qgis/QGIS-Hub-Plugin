@@ -18,7 +18,7 @@ from qgis.PyQt import uic
 from qgis.PyQt.QtCore import (
     QByteArray,
     QItemSelectionModel,
-    QRegExp,
+    QRegularExpression,
     QSize,
     Qt,
     QUrl,
@@ -32,6 +32,7 @@ from qgis.PyQt.QtWidgets import (
     QFormLayout,
     QGraphicsPixmapItem,
     QGraphicsScene,
+    QProgressBar,
     QSizePolicy,
     QTreeWidgetItem,
 )
@@ -53,6 +54,7 @@ from qgis_hub_plugin.utilities.common import (
     QGIS_HUB_DIR,
     download_file,
     download_resource_thumbnail,
+    is_resource_thumbnail_cached,
     normalize_resource_subtypes,
 )
 from qgis_hub_plugin.utilities.exception import DownloadError
@@ -93,7 +95,9 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
         # Message bar
         self.message_bar = QgsMessageBar(self)
-        self.message_bar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.message_bar.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
+        )
         self.vlayout.insertWidget(0, self.message_bar)
 
         # Resources
@@ -118,7 +122,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.populate_resources()
 
         # Tooltip
-        self.buttonBox.button(QDialogButtonBox.Help).setToolTip(
+        self.buttonBox.button(QDialogButtonBox.StandardButton.Help).setToolTip(
             self.tr("Open the help page")
         )
         self.listViewToolButton.setToolTip(self.tr("List view"))
@@ -151,7 +155,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.addQGISPushButton.clicked.connect(self.add_resource_to_qgis)
         self.listViewToolButton.toggled.connect(self.show_list_view)
         self.iconViewToolButton.toggled.connect(self.show_icon_view)
-        self.buttonBox.button(QDialogButtonBox.Help).clicked.connect(
+        self.buttonBox.button(QDialogButtonBox.StandardButton.Help).clicked.connect(
             partial(QDesktopServices.openUrl, QUrl(__uri_homepage__))
         )
         self.reloadPushButton.clicked.connect(
@@ -179,6 +183,34 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def show_warning_message(self, text):
         return self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
+
+    def _start_thumbnail_progress(self, total):
+        """Show a progress bar in the QGIS main message bar for the initial
+        thumbnail download. Returns (progress_bar, progress_widget) or
+        (None, None) when no progress should be shown (no iface or nothing
+        to download)."""
+        if total <= 0 or self.iface is None:
+            return None, None
+
+        message_bar = self.iface.messageBar()
+        widget = message_bar.createMessage(
+            self.tr("QGIS Hub"),
+            self.tr("Downloading {n} thumbnails…").format(n=total),
+        )
+        progress = QProgressBar()
+        progress.setMaximum(total)
+        progress.setValue(0)
+        progress.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        widget.layout().addWidget(progress)
+        message_bar.pushWidget(widget, Qgis.Info)
+        return progress, widget
+
+    def _finish_thumbnail_progress(self, widget):
+        if widget is None or self.iface is None:
+            return
+        self.iface.messageBar().popWidget(widget)
 
     def store_setting(self):
         # Download directory check box
@@ -252,7 +284,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.resource_model.setHorizontalHeaderLabels(
             ["Name", "Creator", "Download", "Uploaded"]
         )
+
+        missing_thumbnail_uuids = {
+            r.get("uuid")
+            for r in self.resources
+            if r.get("thumbnail")
+            and not r.get("thumbnail").endswith("qgis-icon-32x32.png")
+            and not is_resource_thumbnail_cached(r.get("thumbnail"), r.get("uuid"))
+        }
+        progress_bar, progress_widget = self._start_thumbnail_progress(
+            len(missing_thumbnail_uuids)
+        )
+        downloaded = 0
+
         for resource in self.resources:
+            needs_download = resource.get("uuid") in missing_thumbnail_uuids
             item = ResourceItem(resource)
             author = QStandardItem(item.creator)
             download_count = AttributeSortingItem(
@@ -261,6 +307,20 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             pretty_date = item.upload_date.strftime("%d %B %Y").lstrip("0")
             upload_date = AttributeSortingItem(pretty_date, item.upload_date)
             self.resource_model.appendRow([item, author, download_count, upload_date])
+
+            if progress_bar is not None and needs_download:
+                downloaded += 1
+                progress_bar.setValue(downloaded)
+                # Throttle event-loop pumping: per-item processEvents can
+                # re-enter selection/repaint handlers while the model is
+                # mid-populate. Every 10 items keeps the progress bar
+                # responsive without that risk.
+                if downloaded % 10 == 0:
+                    QgsApplication.processEvents()
+
+        if progress_bar is not None:
+            QgsApplication.processEvents()
+        self._finish_thumbnail_progress(progress_widget)
 
         if force_update:
             self.show_success_message("Successfully update the resources")
@@ -281,7 +341,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         selected_data = None
 
         if selected_items:
-            selected_data = selected_items[0].data(0, Qt.UserRole)
+            selected_data = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
 
         # Default to all types selected if nothing is selected or "all" is selected
         is_all_selected = not selected_data or selected_data == "all"
@@ -342,14 +402,21 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if checked:
                 filter_regexp_parts.append(resource_type)
 
-        filter_regexp = QRegExp("|".join(filter_regexp_parts), Qt.CaseInsensitive)
-        self.proxy_model.setFilterRegExp(filter_regexp)
+        filter_regexp = QRegularExpression(
+            "|".join(filter_regexp_parts),
+            QRegularExpression.PatternOption.CaseInsensitiveOption,
+        )
+        self.proxy_model.setFilterRegularExpression(filter_regexp)
         self.proxy_model.setRolesToFilter([ResourceTypeRole])
         self.proxy_model.setCheckboxStates(self.filter_states)
         self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
-        self.proxy_model.setFilterRegExp(QRegExp(text, Qt.CaseInsensitive))
+        self.proxy_model.setFilterRegularExpression(
+            QRegularExpression(
+                text, QRegularExpression.PatternOption.CaseInsensitiveOption
+            )
+        )
         self.proxy_model.setRolesToFilter([NameRole, CreatorRole])
         self.proxy_model.setCheckboxStates(self.filter_states)
 
@@ -435,7 +502,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
             self.graphicsViewPreview.scene().clear()
             self.graphicsViewPreview.scene().addItem(item)
-            self.graphicsViewPreview.fitInView(item, Qt.KeepAspectRatio)
+            self.graphicsViewPreview.fitInView(item, Qt.AspectRatioMode.KeepAspectRatio)
 
         # Description
         self.labelName.setText(resource.name)
@@ -767,6 +834,24 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     )
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
+                except ModuleNotFoundError as exc:
+                    if exc.name == "PyQt5":
+                        self.show_error_message(
+                            self.tr(
+                                "Script “{name}” was written for "
+                                "QGIS 3 (PyQt5) and is not compatible with "
+                                "this QGIS version (PyQt6). The script was "
+                                "saved to {path} but cannot be loaded "
+                                "until it is updated to import from qgis.PyQt."
+                            ).format(name=resource.name, path=file_path)
+                        )
+                    else:
+                        self.show_error_message(
+                            self.tr(
+                                "Script downloaded to {path}, "
+                                "but a required module is missing:\n{err}"
+                            ).format(path=file_path, err=exc)
+                        )
                 except Exception as exc:  # noqa: BLE001
                     self.show_error_message(
                         self.tr(
@@ -808,7 +893,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         selected_indexes = self.treeViewResources.selectionModel().selectedIndexes()
         if selected_indexes:
             self.listViewResources.selectionModel().select(
-                selected_indexes[0], QItemSelectionModel.ClearAndSelect
+                selected_indexes[0], QItemSelectionModel.SelectionFlag.ClearAndSelect
             )
             self.listViewResources.setCurrentIndex(selected_indexes[0])
 
@@ -823,7 +908,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         selected_indexes = self.listViewResources.selectionModel().selectedIndexes()
         if selected_indexes:
             self.treeViewResources.selectionModel().select(
-                selected_indexes[0], QItemSelectionModel.ClearAndSelect
+                selected_indexes[0], QItemSelectionModel.SelectionFlag.ClearAndSelect
             )
             self.treeViewResources.setCurrentIndex(selected_indexes[0])
 
@@ -840,6 +925,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
     def update_icon_size(self, size):
         self.listViewResources.setIconSize(QSize(size, size))
+        self.listViewResources.setGridSize(QSize(size + 20, size + 40))
 
     def setup_resource_type_tree(self):
         """
@@ -860,7 +946,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         all_types_item = QTreeWidgetItem(
             self.treeWidgetCategories, [f"All Types ({total_resources})"]
         )
-        all_types_item.setData(0, Qt.UserRole, "all")
+        all_types_item.setData(0, Qt.ItemDataRole.UserRole, "all")
         all_types_item.setExpanded(True)
         # Make "All Types" bold
         font = all_types_item.font(0)
@@ -900,7 +986,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                 category_item = QTreeWidgetItem(
                     all_types_item, [f"{category_name} ({category_count})"]
                 )
-                category_item.setData(0, Qt.UserRole, types)
+                category_item.setData(0, Qt.ItemDataRole.UserRole, types)
                 # Make category names bold
                 font = category_item.font(0)
                 font.setBold(True)
@@ -937,7 +1023,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                             ],  # Assuming one type per category for simplicity
                             "subtype": subtype,
                         }
-                        subtype_item.setData(0, Qt.UserRole, subtype_data)
+                        subtype_item.setData(0, Qt.ItemDataRole.UserRole, subtype_data)
 
                         # Add the subtype to the tree_items dictionary for later reference
                         self.tree_items[f"{category_name}:{subtype}"] = subtype_item
@@ -949,7 +1035,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             category_item = QTreeWidgetItem(
                 all_types_item, [f"{category_name} ({count})"]
             )
-            category_item.setData(0, Qt.UserRole, [unknown_type])
+            category_item.setData(0, Qt.ItemDataRole.UserRole, [unknown_type])
             # Make dynamic category names bold
             font = category_item.font(0)
             font.setBold(True)
@@ -981,7 +1067,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
 
                     # Store the resource type and subtype for filtering
                     subtype_data = {"type": unknown_type, "subtype": subtype}
-                    subtype_item.setData(0, Qt.UserRole, subtype_data)
+                    subtype_item.setData(0, Qt.ItemDataRole.UserRole, subtype_data)
 
                     # Add the subtype to the tree_items dictionary
                     self.tree_items[f"{category_name}:{subtype}"] = subtype_item
@@ -1138,10 +1224,10 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         # Find the row for the previousLabel in the layout
         row = -1  # Default to -1 if the label is not found
         for i in range(layout.rowCount()):
-            layoutItem_label = layout.itemAt(i, QFormLayout.LabelRole)
+            layoutItem_label = layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
             if not layoutItem_label:
                 continue
-            label_widget = layout.itemAt(i, QFormLayout.LabelRole).widget()
+            label_widget = layout.itemAt(i, QFormLayout.ItemRole.LabelRole).widget()
             if label_widget == previousLabel:
                 row = i
                 break

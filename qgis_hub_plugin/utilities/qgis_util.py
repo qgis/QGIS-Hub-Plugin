@@ -4,7 +4,7 @@ from qgis.PyQt.QtWidgets import QApplication
 
 def show_busy_cursor(func):
     def wrapper(*args, **kwargs):
-        QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QCoreApplication.processEvents()
 
         try:

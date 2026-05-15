@@ -72,5 +72,6 @@ development/documentation
 development/translation
 development/packaging
 development/testing
+development/qt6-migration
 development/history
 ```
