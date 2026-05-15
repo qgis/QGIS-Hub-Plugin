@@ -311,8 +311,15 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             if progress_bar is not None and needs_download:
                 downloaded += 1
                 progress_bar.setValue(downloaded)
-                QgsApplication.processEvents()
+                # Throttle event-loop pumping: per-item processEvents can
+                # re-enter selection/repaint handlers while the model is
+                # mid-populate. Every 10 items keeps the progress bar
+                # responsive without that risk.
+                if downloaded % 10 == 0:
+                    QgsApplication.processEvents()
 
+        if progress_bar is not None:
+            QgsApplication.processEvents()
         self._finish_thumbnail_progress(progress_widget)
 
         if force_update:
@@ -831,19 +838,19 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
                     if exc.name == "PyQt5":
                         self.show_error_message(
                             self.tr(
-                                f"Script “{resource.name}” was written for "
+                                "Script “{name}” was written for "
                                 "QGIS 3 (PyQt5) and is not compatible with "
                                 "this QGIS version (PyQt6). The script was "
-                                f"saved to {file_path} but cannot be loaded "
+                                "saved to {path} but cannot be loaded "
                                 "until it is updated to import from qgis.PyQt."
-                            )
+                            ).format(name=resource.name, path=file_path)
                         )
                     else:
                         self.show_error_message(
                             self.tr(
-                                f"Script downloaded to {file_path}, "
-                                f"but a required module is missing:\n{exc}"
-                            )
+                                "Script downloaded to {path}, "
+                                "but a required module is missing:\n{err}"
+                            ).format(path=file_path, err=exc)
                         )
                 except Exception as exc:  # noqa: BLE001
                     self.show_error_message(

@@ -153,7 +153,7 @@ def clear_cache() -> tuple[bool, int]:
     thumbnails_removed = 0
     thumbnail_dir = Path(QGIS_HUB_DIR, "thumbnails")
     if thumbnail_dir.exists():
-        thumbnails_removed = sum(1 for _ in thumbnail_dir.iterdir() if _.is_file())
+        thumbnails_removed = sum(1 for p in thumbnail_dir.rglob("*") if p.is_file())
         shutil.rmtree(thumbnail_dir)
 
     return response_removed, thumbnails_removed
@@ -175,7 +175,17 @@ def resource_thumbnail_cache_path(url: str, uuid: str) -> Optional[Path]:
 
 def is_resource_thumbnail_cached(url: str, uuid: str) -> bool:
     path = resource_thumbnail_cache_path(url, uuid)
-    return path is not None and path.exists()
+    if path is None:
+        return False
+    if path.exists():
+        return True
+    # When Qt cannot decode the original format (e.g. webp on Qt6) the
+    # download path is converted to a .png sibling that gets reused on
+    # subsequent calls. Treat the sibling as a valid cache hit so we
+    # don't re-download just because the original was cleaned up.
+    if not _qt_can_decode(path.suffix):
+        return path.with_suffix(".png").exists()
+    return False
 
 
 def download_resource_thumbnail(url: str, uuid: str) -> Path:

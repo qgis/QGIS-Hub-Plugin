@@ -388,6 +388,53 @@ class TestCachePathHelpers(unittest.TestCase):
                     )
                 )
 
+    def test_is_cached_accepts_png_sibling_for_undecodable_format(self):
+        """When Qt cannot decode the original (e.g. webp on Qt6) the
+        converted .png sibling should count as a cache hit."""
+        import tempfile
+
+        from qgis_hub_plugin.utilities import common
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            thumb_dir = base / "thumbnails"
+            thumb_dir.mkdir()
+            # Only the converted PNG exists; the original webp does not
+            (thumb_dir / "uuid-webp.png").write_bytes(b"png-bytes")
+
+            with patch.object(common, "QGIS_HUB_DIR", base):
+                with patch.object(
+                    common, "_QT_SUPPORTED_IMAGE_FORMATS", {"png", "jpeg"}
+                ):
+                    self.assertTrue(
+                        common.is_resource_thumbnail_cached(
+                            "https://example.com/thumb.webp", "uuid-webp"
+                        )
+                    )
+
+    def test_is_cached_does_not_use_png_sibling_for_decodable_format(self):
+        """A missing .jpg must not be considered cached just because a
+        .png sibling happens to exist."""
+        import tempfile
+
+        from qgis_hub_plugin.utilities import common
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            thumb_dir = base / "thumbnails"
+            thumb_dir.mkdir()
+            (thumb_dir / "uuid-jpg.png").write_bytes(b"png-bytes")
+
+            with patch.object(common, "QGIS_HUB_DIR", base):
+                with patch.object(
+                    common, "_QT_SUPPORTED_IMAGE_FORMATS", {"png", "jpeg"}
+                ):
+                    self.assertFalse(
+                        common.is_resource_thumbnail_cached(
+                            "https://example.com/thumb.jpg", "uuid-jpg"
+                        )
+                    )
+
 
 class TestQtCanDecode(unittest.TestCase):
     """Test _qt_can_decode capability probe."""
@@ -451,6 +498,25 @@ class TestClearCache(unittest.TestCase):
 
             self.assertFalse(response_removed)
             self.assertEqual(n, 0)
+
+    def test_clear_cache_counts_nested_files(self):
+        """Files under subdirectories in the thumbnail cache must be
+        included in the removed count (rglob, not iterdir)."""
+        import tempfile
+
+        from qgis_hub_plugin.utilities import common
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            thumb_dir = base / "thumbnails"
+            (thumb_dir / "sub").mkdir(parents=True)
+            (thumb_dir / "top.jpg").write_bytes(b"x")
+            (thumb_dir / "sub" / "nested.png").write_bytes(b"y")
+
+            with patch.object(common, "QGIS_HUB_DIR", base):
+                _, n = common.clear_cache()
+
+            self.assertEqual(n, 2)
 
     def test_clear_cache_response_only(self):
         import tempfile
