@@ -84,7 +84,6 @@ jobs:
 
       - name: Install Python requirements
         run: |
-          python3 -m pip install ${{ matrix.pip-extra-args }} --upgrade pip setuptools wheel
           python3 -m pip install ${{ matrix.pip-extra-args }} -r requirements/testing.txt
 
       - name: Verify QGIS Python is available
