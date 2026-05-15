@@ -202,7 +202,7 @@ class TestFilterProxyModel(unittest.TestCase):
         self.proxy.setRolesToFilter([NameRole])
 
         # Sort by column 0 (which has SortingRole data)
-        self.proxy.sort(0, 1)  # 1 = Descending
+        self.proxy.sort(0, Qt.SortOrder.DescendingOrder)
 
         # Verify order by download count (50, 40, 30, 20, 15, 10)
         expected_counts = [50, 40, 30, 20, 15, 10]

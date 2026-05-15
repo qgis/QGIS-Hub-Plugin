@@ -20,6 +20,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from qgis.PyQt.QtNetwork import QNetworkReply
 
 
 class TestDownloadUtilities(unittest.TestCase):
@@ -34,7 +35,7 @@ class TestDownloadUtilities(unittest.TestCase):
 
         # Setup mock network reply
         mock_reply = MagicMock()
-        mock_reply.error.return_value = 0  # QNetworkReply.NoError
+        mock_reply.error.return_value = QNetworkReply.NetworkError.NoError
         mock_reply.isFinished.return_value = True
         mock_reply.readAll.return_value = b"file content data"
 
@@ -71,7 +72,7 @@ class TestDownloadUtilities(unittest.TestCase):
 
         # Setup mock network reply with 404 error
         mock_reply = MagicMock()
-        mock_reply.error.return_value = 203  # QNetworkReply.ContentNotFoundError
+        mock_reply.error.return_value = QNetworkReply.NetworkError.ContentNotFoundError
         mock_reply.isFinished.return_value = True
         mock_reply.errorString.return_value = "Not Found"
 
@@ -95,7 +96,7 @@ class TestDownloadUtilities(unittest.TestCase):
 
         # Setup mock network reply with error
         mock_reply = MagicMock()
-        mock_reply.error.return_value = 99  # Some network error
+        mock_reply.error.return_value = QNetworkReply.NetworkError.TimeoutError
         mock_reply.isFinished.return_value = True
         mock_reply.errorString.return_value = "Network timeout"
 
@@ -121,7 +122,7 @@ class TestDownloadUtilities(unittest.TestCase):
 
         # Setup successful network reply
         mock_reply = MagicMock()
-        mock_reply.error.return_value = 0
+        mock_reply.error.return_value = QNetworkReply.NetworkError.NoError
         mock_reply.isFinished.return_value = True
         mock_reply.readAll.return_value = b"data"
 
