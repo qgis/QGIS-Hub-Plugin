@@ -58,8 +58,10 @@ jobs:
         include:
           - qgis-image: qgis/qgis:release-3_34
             qt-version: Qt5
+            pip-extra-args: ""
           - qgis-image: qgis/qgis:4.0
             qt-version: Qt6
+            pip-extra-args: "--break-system-packages"
 
     container:
       image: ${{ matrix.qgis-image }}
@@ -82,8 +84,8 @@ jobs:
 
       - name: Install Python requirements
         run: |
-          python3 -m pip install --break-system-packages --upgrade pip setuptools wheel
-          python3 -m pip install --break-system-packages -r requirements/testing.txt
+          python3 -m pip install ${{ matrix.pip-extra-args }} --upgrade pip setuptools wheel
+          python3 -m pip install ${{ matrix.pip-extra-args }} -r requirements/testing.txt
 
       - name: Verify QGIS Python is available
         run: |
