@@ -318,19 +318,22 @@ def test_thumbnail_extension_detection(url, uuid, expected_extension):
     """
     from qgis_hub_plugin.utilities.common import download_resource_thumbnail
 
-    with patch("qgis_hub_plugin.utilities.common.download_file") as mock_download:
-        with patch("qgis_hub_plugin.utilities.common.QgsApplication") as mock_qgs:
-            with patch("pathlib.Path.exists") as mock_exists:
-                mock_qgs.qgisSettingsDirPath.return_value = "/tmp/qgis"
-                mock_download.return_value = True
-                mock_exists.return_value = True
+    # Force Qt-can-decode True so the webp case doesn't fall into the Pillow
+    # conversion branch (which would need a real source file on disk).
+    with patch("qgis_hub_plugin.utilities.common._qt_can_decode", return_value=True):
+        with patch("qgis_hub_plugin.utilities.common.download_file") as mock_download:
+            with patch("qgis_hub_plugin.utilities.common.QgsApplication") as mock_qgs:
+                with patch("pathlib.Path.exists") as mock_exists:
+                    mock_qgs.qgisSettingsDirPath.return_value = "/tmp/qgis"
+                    mock_download.return_value = True
+                    mock_exists.return_value = True
 
-                download_resource_thumbnail(url, uuid)
+                    download_resource_thumbnail(url, uuid)
 
-                # Check that download was called with correct extension
-                call_args = mock_download.call_args
-                destination_path = call_args[0][1]
-                assert str(destination_path).endswith(expected_extension)
+                    # Check that download was called with correct extension
+                    call_args = mock_download.call_args
+                    destination_path = call_args[0][1]
+                    assert str(destination_path).endswith(expected_extension)
 
 
 class TestCachePathHelpers(unittest.TestCase):
