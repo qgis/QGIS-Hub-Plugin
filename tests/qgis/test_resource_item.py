@@ -24,8 +24,12 @@ import pytest
 # Try to import QIcon and ResourceItem from QGIS for use in mocks
 try:
     from qgis.PyQt.QtGui import QIcon
+    from qgis.testing import start_app
 
     from qgis_hub_plugin.gui.resource_item import ResourceItem
+
+    # Ensure a QApplication exists for tests that build real QPixmap/QIcon
+    start_app()
 except ImportError:
     # Create mock classes for when QGIS is not available
     QIcon = MagicMock
@@ -202,6 +206,67 @@ class TestResourceItem(unittest.TestCase):
         # Verify whitespace is stripped
         self.assertEqual(item.name, "Test Resource")
         self.assertEqual(item.creator, "Test Creator")
+
+
+class TestMakeUniformIcon(unittest.TestCase):
+    """Test ResourceItem._make_uniform_icon."""
+
+    def test_fallback_when_path_is_none(self):
+        """None path returns the default hub icon."""
+        from qgis_hub_plugin.gui.resource_item import ResourceItem
+
+        icon = ResourceItem._make_uniform_icon(None)
+        self.assertIsInstance(icon, QIcon)
+        self.assertFalse(icon.isNull())
+
+    def test_fallback_when_path_is_default_hub_icon(self):
+        """A path pointing at the bundled QGIS_Hub_icon.svg short-circuits."""
+        from pathlib import Path
+
+        from qgis_hub_plugin.gui.resource_item import ResourceItem
+
+        icon = ResourceItem._make_uniform_icon(Path("/x/QGIS_Hub_icon.svg"))
+        self.assertIsInstance(icon, QIcon)
+        self.assertFalse(icon.isNull())
+
+    def test_fallback_when_pixmap_is_null(self):
+        """Unreadable thumbnail file falls back to default icon."""
+        import tempfile
+        from pathlib import Path
+
+        from qgis_hub_plugin.gui.resource_item import ResourceItem
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            bogus = Path(tmpdir) / "broken.jpg"
+            bogus.write_bytes(b"not a real image")
+
+            icon = ResourceItem._make_uniform_icon(bogus)
+            self.assertIsInstance(icon, QIcon)
+            self.assertFalse(icon.isNull())
+
+    def test_returns_square_canvas_for_valid_image(self):
+        """Valid thumbnail is centered on a square canvas of target_size."""
+        import tempfile
+        from pathlib import Path
+
+        from qgis.PyQt.QtGui import QImage
+
+        from qgis_hub_plugin.gui.resource_item import ResourceItem
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a non-square test image so we can verify the canvas is square
+            src = Path(tmpdir) / "thumb.png"
+            img = QImage(80, 40, QImage.Format.Format_ARGB32)
+            img.fill(0xFF0000FF)
+            self.assertTrue(img.save(str(src), "PNG"))
+
+            icon = ResourceItem._make_uniform_icon(src, target_size=128)
+            self.assertIsInstance(icon, QIcon)
+            self.assertFalse(icon.isNull())
+
+            pixmap = icon.pixmap(128, 128)
+            self.assertEqual(pixmap.width(), 128)
+            self.assertEqual(pixmap.height(), 128)
 
 
 class TestAttributeSortingItem(unittest.TestCase):

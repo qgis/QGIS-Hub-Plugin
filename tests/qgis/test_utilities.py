@@ -332,6 +332,188 @@ def test_thumbnail_extension_detection(url, uuid, expected_extension):
                 assert str(destination_path).endswith(expected_extension)
 
 
+class TestCachePathHelpers(unittest.TestCase):
+    """Test resource_thumbnail_cache_path and is_resource_thumbnail_cached."""
+
+    def test_cache_path_none_for_empty_url(self):
+        from qgis_hub_plugin.utilities.common import resource_thumbnail_cache_path
+
+        self.assertIsNone(resource_thumbnail_cache_path("", "uuid-1"))
+
+    def test_cache_path_none_for_default_icon_url(self):
+        from qgis_hub_plugin.utilities.common import resource_thumbnail_cache_path
+
+        url = "https://example.com/qgis-icon-32x32.png"
+        self.assertIsNone(resource_thumbnail_cache_path(url, "uuid-1"))
+
+    def test_cache_path_uses_url_extension(self):
+        from qgis_hub_plugin.utilities.common import resource_thumbnail_cache_path
+
+        path = resource_thumbnail_cache_path(
+            "https://example.com/thumb.webp", "uuid-abc"
+        )
+        self.assertIsNotNone(path)
+        self.assertTrue(str(path).endswith("uuid-abc.webp"))
+
+    def test_is_cached_false_when_missing(self, tmp_path=None):
+        from qgis_hub_plugin.utilities.common import is_resource_thumbnail_cached
+
+        self.assertFalse(
+            is_resource_thumbnail_cached(
+                "https://example.com/thumb.jpg", "uuid-not-on-disk"
+            )
+        )
+
+    def test_is_cached_false_for_default_icon(self):
+        from qgis_hub_plugin.utilities.common import is_resource_thumbnail_cached
+
+        self.assertFalse(
+            is_resource_thumbnail_cached(
+                "https://example.com/qgis-icon-32x32.png", "uuid-x"
+            )
+        )
+
+    def test_is_cached_true_when_file_exists(self):
+        from qgis_hub_plugin.utilities import common
+
+        with patch.object(common, "QGIS_HUB_DIR", Path("/nonexistent-base")):
+            with patch("pathlib.Path.exists", return_value=True):
+                self.assertTrue(
+                    common.is_resource_thumbnail_cached(
+                        "https://example.com/thumb.jpg", "uuid-cached"
+                    )
+                )
+
+
+class TestQtCanDecode(unittest.TestCase):
+    """Test _qt_can_decode capability probe."""
+
+    def test_returns_true_for_supported_format(self):
+        from qgis_hub_plugin.utilities import common
+
+        with patch.object(common, "_QT_SUPPORTED_IMAGE_FORMATS", {"png", "jpeg"}):
+            self.assertTrue(common._qt_can_decode("png"))
+            self.assertTrue(common._qt_can_decode("PNG"))
+            self.assertTrue(common._qt_can_decode(".png"))
+
+    def test_jpg_aliases_to_jpeg(self):
+        from qgis_hub_plugin.utilities import common
+
+        with patch.object(common, "_QT_SUPPORTED_IMAGE_FORMATS", {"jpeg"}):
+            self.assertTrue(common._qt_can_decode("jpg"))
+
+        with patch.object(common, "_QT_SUPPORTED_IMAGE_FORMATS", {"jpg"}):
+            self.assertTrue(common._qt_can_decode("jpeg"))
+
+    def test_returns_false_for_unsupported_format(self):
+        from qgis_hub_plugin.utilities import common
+
+        with patch.object(common, "_QT_SUPPORTED_IMAGE_FORMATS", {"png", "jpeg"}):
+            self.assertFalse(common._qt_can_decode("webp"))
+
+
+class TestClearCache(unittest.TestCase):
+    """Test clear_cache helper."""
+
+    def test_clear_cache_removes_response_and_thumbnails(self, tmp_path=None):
+        import tempfile
+
+        from qgis_hub_plugin.utilities import common
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            (base / "response.json").write_text("{}")
+            thumb_dir = base / "thumbnails"
+            thumb_dir.mkdir()
+            (thumb_dir / "a.jpg").write_bytes(b"x")
+            (thumb_dir / "b.png").write_bytes(b"y")
+
+            with patch.object(common, "QGIS_HUB_DIR", base):
+                response_removed, n = common.clear_cache()
+
+            self.assertTrue(response_removed)
+            self.assertEqual(n, 2)
+            self.assertFalse((base / "response.json").exists())
+            self.assertFalse(thumb_dir.exists())
+
+    def test_clear_cache_when_nothing_exists(self):
+        import tempfile
+
+        from qgis_hub_plugin.utilities import common
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.object(common, "QGIS_HUB_DIR", Path(tmpdir)):
+                response_removed, n = common.clear_cache()
+
+            self.assertFalse(response_removed)
+            self.assertEqual(n, 0)
+
+    def test_clear_cache_response_only(self):
+        import tempfile
+
+        from qgis_hub_plugin.utilities import common
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            (base / "response.json").write_text("{}")
+
+            with patch.object(common, "QGIS_HUB_DIR", base):
+                response_removed, n = common.clear_cache()
+
+            self.assertTrue(response_removed)
+            self.assertEqual(n, 0)
+
+
+class TestConvertThumbnailToPng(unittest.TestCase):
+    """Test _convert_thumbnail_to_png Pillow fallback."""
+
+    def test_convert_success(self):
+        import tempfile
+
+        from qgis_hub_plugin.utilities import common
+
+        if not common.HAS_PILLOW:
+            self.skipTest("Pillow not installed")
+
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "thumb.webp"
+            target = Path(tmpdir) / "thumb.png"
+
+            img = Image.new("RGB", (64, 32), color="red")
+            try:
+                img.save(source, format="WEBP")
+            except (KeyError, OSError):
+                # Pillow build without WEBP encoder — fall back to PNG source
+                source = Path(tmpdir) / "thumb.bmp"
+                img.save(source, format="BMP")
+
+            result = common._convert_thumbnail_to_png(source, target)
+
+            self.assertEqual(result, target)
+            self.assertTrue(target.exists())
+            self.assertGreater(target.stat().st_size, 0)
+
+    def test_convert_returns_none_on_failure(self):
+        import tempfile
+
+        from qgis_hub_plugin.utilities import common
+
+        if not common.HAS_PILLOW:
+            self.skipTest("Pillow not installed")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "broken.webp"
+            source.write_bytes(b"not an image")
+            target = Path(tmpdir) / "broken.png"
+
+            result = common._convert_thumbnail_to_png(source, target)
+
+            self.assertIsNone(result)
+            self.assertFalse(target.exists())
+
+
 # ############################################################################
 # ####### Stand-alone run ########
 # ################################
