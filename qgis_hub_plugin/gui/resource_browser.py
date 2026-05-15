@@ -1,5 +1,4 @@
 import os
-import platform
 import tempfile
 import zipfile
 from functools import partial
@@ -752,10 +751,8 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
     @show_busy_cursor
     def add_style_to_qgis(self):
         resource = self.selected_resource
-        tempdir = Path(
-            "/tmp" if platform.system() == "Darwin" else tempfile.gettempdir()
-        )
-        tempfile_path = Path(tempdir, resource.file.split("/")[-1])
+        tempdir = Path(tempfile.mkdtemp(prefix="qgis_hub_"))
+        tempfile_path = tempdir / resource.file.split("/")[-1]
         download_file(resource.file, tempfile_path, True)
 
         # Add to QGIS style library
