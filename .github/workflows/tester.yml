@@ -49,11 +49,20 @@ jobs:
           fail_ci_if_error: false
 
   tests-qgis:
-    name: Integration Tests (QGIS)
+    name: Integration Tests (${{ matrix.qgis-image }})
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - qgis-image: qgis/qgis:release-3_34
+            qt-version: Qt5
+          - qgis-image: qgis/qgis:4.0
+            qt-version: Qt6
+
     container:
-      image: qgis/qgis:release-3_34
+      image: ${{ matrix.qgis-image }}
       options: --user root
 
     env:
@@ -89,5 +98,5 @@ jobs:
         if: success()
         with:
           files: ./coverage.xml
-          flags: integration
+          flags: integration-${{ matrix.qt-version }}
           fail_ci_if_error: false
