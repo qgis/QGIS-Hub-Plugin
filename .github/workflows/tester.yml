@@ -5,11 +5,18 @@ on:
     branches: [main]
     paths:
       - "**.py"
+      - ".github/workflows/tester.yml"
+      - "requirements/testing.txt"
 
   pull_request:
     branches: [main]
     paths:
       - "**.py"
+      - ".github/workflows/tester.yml"
+      - "requirements/testing.txt"
+
+permissions:
+  contents: read
 
 env:
   PROJECT_FOLDER: "qgis_hub_plugin"
@@ -93,6 +100,9 @@ jobs:
       - name: Run QGIS tests
         run: |
           python3 -m pytest tests/ -v --cov=qgis_hub_plugin --cov-report=xml --cov-report=term
+
+      - name: Install curl for Codecov
+        run: command -v curl || (apt-get update && apt-get install -y --no-install-recommends curl)
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
