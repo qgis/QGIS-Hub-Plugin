@@ -173,6 +173,43 @@ class TestIntegration(unittest.TestCase):
         self.assertEqual(dialog.proxy_model.rowCount(), 2)
 
     @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
+    @patch("qgis_hub_plugin.gui.resource_browser.download_resource_thumbnail")
+    def test_search_matches_description(self, mock_thumbnail, mock_api):
+        """Test that the search box also matches the resource description."""
+        from qgis_hub_plugin.gui.resource_browser import ResourceBrowserDialog
+
+        mock_api.return_value = {
+            "total": 2,
+            "count": 2,
+            "next": None,
+            "results": [
+                {
+                    "uuid": f"search-test-{i}",
+                    "name": f"Resource {i}",
+                    "resource_type": "model",
+                    "resource_subtype": "",
+                    "creator": "Test Creator",
+                    "upload_date": "2024-01-01T00:00:00Z",
+                    "download_count": 0,
+                    "file": f"https://example.com/file{i}",
+                    "thumbnail": None,
+                    "description": description,
+                    "dependencies": [],
+                }
+                for i, description in enumerate(["<b>Flood</b>\r\nrisk (beta)", None])
+            ],
+        }
+        mock_thumbnail.return_value = None
+
+        dialog = ResourceBrowserDialog()
+        dialog.lineEditSearch.setText("flood risk")
+        self.assertEqual(dialog.proxy_model.rowCount(), 1)
+
+        # an invalid pattern is searched as plain text
+        dialog.lineEditSearch.setText("(beta")
+        self.assertEqual(dialog.proxy_model.rowCount(), 1)
+
+    @patch("qgis_hub_plugin.gui.resource_browser.get_all_resources")
     def test_resource_browser_handles_api_failure(self, mock_api):
         """Test that resource browser handles API failure gracefully."""
         from qgis_hub_plugin.gui.resource_browser import ResourceBrowserDialog

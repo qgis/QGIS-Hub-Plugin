@@ -41,6 +41,7 @@ from qgis_hub_plugin.core.api_client import get_all_resources
 from qgis_hub_plugin.core.custom_filter_proxy import MultiRoleFilterProxyModel
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
+    DescriptionRole,
     NameRole,
     ResourceSubtypeRole,
     ResourceTypeRole,
@@ -134,7 +135,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             self.tr("Update resources from the QGIS Hub website")
         )
         self.lineEditSearch.setToolTip(
-            self.tr("Search resource by the name or the creator")
+            self.tr("Search resource by the name, the creator or the description")
         )
         self.pushButtonDownload.setToolTip(
             self.tr("Download selected resource to your local disk")
@@ -411,12 +412,13 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.on_filter_text_changed(current_text)
 
     def on_filter_text_changed(self, text):
-        self.proxy_model.setFilterRegularExpression(
-            QRegularExpression(
-                text, QRegularExpression.PatternOption.CaseInsensitiveOption
-            )
-        )
-        self.proxy_model.setRolesToFilter([NameRole, CreatorRole])
+        option = QRegularExpression.PatternOption.CaseInsensitiveOption
+        regexp = QRegularExpression(text, option)
+        # search an unfinished pattern such as "(dark" as plain text
+        if not regexp.isValid():
+            regexp = QRegularExpression(QRegularExpression.escape(text), option)
+        self.proxy_model.setFilterRegularExpression(regexp)
+        self.proxy_model.setRolesToFilter([NameRole, CreatorRole, DescriptionRole])
         self.proxy_model.setCheckboxStates(self.filter_states)
 
         self.update_title_bar()
