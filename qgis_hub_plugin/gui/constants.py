@@ -6,6 +6,7 @@ NameRole = Qt.ItemDataRole.UserRole + 2
 CreatorRole = Qt.ItemDataRole.UserRole + 3
 SortingRole = Qt.ItemDataRole.UserRole + 4
 ResourceSubtypeRole = Qt.ItemDataRole.UserRole + 5
+DescriptionRole = Qt.ItemDataRole.UserRole + 6
 
 
 # Type of resources, based on the QGIS Hub API
