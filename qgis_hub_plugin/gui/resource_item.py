@@ -1,3 +1,5 @@
+import html
+import re
 from datetime import datetime
 
 from qgis.PyQt.QtCore import Qt
@@ -5,6 +7,7 @@ from qgis.PyQt.QtGui import QIcon, QPainter, QPixmap, QStandardItem
 
 from qgis_hub_plugin.gui.constants import (
     CreatorRole,
+    DescriptionRole,
     NameRole,
     ResourceSubtypeRole,
     ResourceTypeRole,
@@ -50,6 +53,9 @@ class ResourceItem(QStandardItem):
         self.setData(self.resource_type, ResourceTypeRole)
         self.setData(self.name, NameRole)
         self.setData(self.creator, CreatorRole)
+        # remove tags like the plugin manager, Qt's parser drops text after a bare "<"
+        description = re.sub(r"<[a-zA-Z/!][^>]*>", "", self.description or "")
+        self.setData(" ".join(html.unescape(description).split()), DescriptionRole)
         self.setData(self.resource_subtypes, ResourceSubtypeRole)
 
     @staticmethod

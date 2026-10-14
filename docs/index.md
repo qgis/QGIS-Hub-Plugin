@@ -22,7 +22,7 @@
 
 Features:
 
-1. Search by resource's name or creator
+1. Search by resource's name, creator or description
 2. Filter by resource type or subtype
 3. Resource shown as grid or list:
 
