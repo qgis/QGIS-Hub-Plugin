@@ -487,9 +487,6 @@
              <height>128</height>
             </size>
            </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(240, 240, 240);</string>
-           </property>
            <property name="frameShape">
             <enum>QFrame::StyledPanel</enum>
            </property>
@@ -659,9 +656,6 @@
           <widget class="QTextBrowser" name="textBrowserDescription">
            <property name="autoFillBackground">
             <bool>true</bool>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(240, 240, 240);</string>
            </property>
            <property name="frameShape">
             <enum>QFrame::NoFrame</enum>
