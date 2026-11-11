@@ -16,7 +16,7 @@
 
 ## Introduction
 
-[The official QGIS Hub website](https://plugins.qgis.org/styles/?order_by=-upload_date&&is_gallery=true) offers a collection of useful QGIS resource from QGIS style, layer, and processing model. This QGIS Hub plugin helps you to browse the resources available and add it directly to your QGIS.
+[The official QGIS Hub website](https://hub.qgis.org/) offers a collection of useful QGIS resource from QGIS style, layer, and processing model. This QGIS Hub plugin helps you to browse the resources available and add it directly to your QGIS.
 
 ![Resource Browser](images/resource_browser.png)
 

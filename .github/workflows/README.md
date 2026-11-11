@@ -17,7 +17,8 @@ Runs automated tests on every push and pull request.
    - Coverage: Uploads to Codecov with `unit` flag
 
 2. **Integration Tests (QGIS)** - Tests requiring QGIS
-   - Runs on: QGIS Docker container (`qgis/qgis:release-3_34`)
+   - Runs on: QGIS Docker containers `qgis/qgis:release-3_34` (Qt5) and `qgis/qgis:4.0` (Qt6)
+   - The Qt6 job also runs QGIS's `pyqt5_to_pyqt6.py` check, as plugins.qgis.org does on upload
    - Duration: ~1-2 minutes
    - Tests: `tests/qgis/` (24+ tests)
    - Coverage: Uploads to Codecov with `integration` flag
@@ -32,12 +33,13 @@ Runs automated tests on every push and pull request.
 
 ### ✅ Linter (`linter.yml`)
 
-Runs code quality checks with flake8.
+Runs code quality checks with flake8 and bandit.
 
 **Jobs:**
 - Python linting with flake8
 - Checks syntax errors and undefined names
 - Reports code statistics
+- Security scan with bandit, as plugins.qgis.org does on upload
 
 **Triggers:**
 - Push to `main` branch (when `**.py` files change)
@@ -53,12 +55,12 @@ Builds and publishes Sphinx documentation to GitHub Pages.
 
 ### 🚀 Releaser (`releaser.yml`)
 
-Packages and releases the plugin.
+Packages and releases the plugin when a tag is pushed (see "Release a version" in `docs/development/packaging.md`).
 
 **Jobs:**
-- Creates plugin package
-- Publishes GitHub release
-- (Optional) Uploads to QGIS Plugin Repository
+- Creates plugin package with qgis-plugin-ci
+- Publishes GitHub release with the zip and `plugins.xml`
+- Uploads to the QGIS plugin repository (`QGIS_PLUGIN_TOKEN` secret)
 
 ## QGIS Docker Container
 

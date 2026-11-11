@@ -146,3 +146,16 @@ Tracked but not fixed in `v0.6.0`:
 
 The relevant entry point is `add_processing_script_to_qgis` in
 `gui/resource_browser.py`.
+
+## 9. CI: plugins.qgis.org Qt6 check
+
+plugins.qgis.org scans each upload with QGIS's
+`scripts/pyqt5_to_pyqt6/pyqt5_to_pyqt6.py` and blocks the version on any
+finding, e.g. unscoped enums like `Qgis.Success` instead of
+`Qgis.MessageLevel.Success` (this blocked `v0.7.0`).
+
+The Qt6 job in `.github/workflows/tester.yml` runs the same script with
+`--dry_run`. It needs PyQt6 + QGIS, and imports PyQt6 modules the
+`qgis/qgis:4.0` image lacks (`python3-pyqt6.qtquick`, `.qtsvg`, `.qsci`),
+so the job installs them with apt. `--dry_run` always exits 0, so the job
+fails when the log has a `file.py:line:col - ...` finding.
