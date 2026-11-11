@@ -2,8 +2,6 @@
 
 ## Environment setup
 
-> **Note:** A pre-configured virtual environment is already set up in this repository. See [DEVELOPMENT_SETUP.md](../../DEVELOPMENT_SETUP.md) for quick start instructions.
-
 ### First-time Setup (Ubuntu)
 
 If the virtual environment doesn't exist or you need to recreate it:
@@ -17,6 +15,8 @@ source .venv/bin/activate
 python -m pip install -U pip setuptools wheel
 python -m pip install -U -r requirements/development.txt
 python -m pip install -U -r requirements/testing.txt
+# only to package or release locally
+python -m pip install -U -r requirements/packaging.txt
 
 # install git hooks (pre-commit)
 pre-commit install
@@ -61,4 +61,4 @@ flake8 qgis_hub_plugin/
 pre-commit run --all-files
 ```
 
-For complete documentation, see [DEVELOPMENT_SETUP.md](../../DEVELOPMENT_SETUP.md).
+For complete documentation, see [DEVELOPMENT_SETUP.md](https://github.com/qgis/QGIS-Hub-Plugin/blob/main/DEVELOPMENT_SETUP.md).

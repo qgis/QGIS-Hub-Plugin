@@ -24,9 +24,57 @@ See also: [contribution guidelines](CONTRIBUTING.md).
 
 ## CI/CD
 
-Plugin is linted, tested, packaged and published with GitHub.
+Plugin is linted, tested, packaged and published with GitHub Actions.
 
-If you mean to deploy it to the [official QGIS plugins repository](https://plugins.qgis.org/), remember to set your OSGeo credentials (`OSGEO_USER_NAME` and `OSGEO_USER_PASSWORD`) as environment variables in your CI/CD tool.
+The Linter workflow runs [Bandit](https://bandit.readthedocs.io/) and the Qt6 test job runs QGIS's
+`pyqt5_to_pyqt6.py` check: the same scans the [QGIS plugins repository](https://plugins.qgis.org/)
+runs on upload, where any finding blocks the version.
+
+### Releasing
+
+Pushing a tag triggers the Releaser workflow, which uses [qgis-plugin-ci](https://github.com/opengisch/qgis-plugin-ci/) to
+create the GitHub release with the plugin zip and `plugins.xml`, and to upload the zip to the QGIS plugins repository
+(with the `QGIS_PLUGIN_TOKEN` repository secret, a token from the plugin's page on plugins.qgis.org).
+
+1. Open a PR adding the new version to `CHANGELOG.md`, and merge it into `main`:
+
+   ```markdown
+   ## X.Y.Z - YYYY-MM-DD
+
+   Added:
+
+   - ...
+
+   Fixed:
+
+   - ...
+   ```
+
+   Use plain `Added:` / `Changed:` / `Fixed:` labels, not `###` headings: qgis-plugin-ci ends a version's notes at the
+   next `##`, which would leave the release notes and the plugin manager changelog empty.
+   No need to edit the version in `metadata.txt`, it is set from the tag.
+
+1. Make sure CI passes on `main`, then tag and push:
+
+   ```sh
+   git checkout main && git pull
+   git tag -a X.Y.Z -m "Version X.Y.Z"
+   git push origin X.Y.Z
+   ```
+
+1. Check the Releaser run, the [GitHub release](https://github.com/qgis/QGIS-Hub-Plugin/releases), and the security
+   scan of the new version on [plugins.qgis.org](https://plugins.qgis.org/plugins/qgis_hub_plugin/).
+
+Do not create the GitHub release by hand before pushing the tag: the workflow then fails because the release already exists.
+A version number can only be uploaded once to plugins.qgis.org, so a blocked or broken upload needs a new patch version.
+
+To check the changelog or build the zip locally:
+
+```sh
+python -m pip install -U -r requirements/packaging.txt
+qgis-plugin-ci changelog X.Y.Z
+qgis-plugin-ci package X.Y.Z --allow-uncommitted-changes
+```
 
 ### Documentation
 

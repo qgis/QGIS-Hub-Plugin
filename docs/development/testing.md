@@ -7,7 +7,7 @@ Tests are written in 2 separate folders:
 
 ## Requirements
 
-- 3.28 < QGIS < 3.99
+- QGIS 3.28+ (Qt5) or QGIS 4 (Qt6)
 
 ```bash
 python -m pip install -U -r requirements/testing.txt
