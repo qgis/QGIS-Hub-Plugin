@@ -101,6 +101,7 @@ jobs:
       - name: Check Qt6 compatibility
         if: matrix.qt-version == 'Qt6'
         run: |
+          apt-get update && apt-get install -y --no-install-recommends python3-pyqt6.qtquick python3-pyqt6.qtsvg python3-pyqt6.qsci
           python3 -m pip install ${{ matrix.pip-extra-args }} tokenize-rt
           python3 -c "import urllib.request; urllib.request.urlretrieve('https://raw.githubusercontent.com/qgis/QGIS/master/scripts/pyqt5_to_pyqt6/pyqt5_to_pyqt6.py', '/tmp/pyqt5_to_pyqt6.py')"
           python3 /tmp/pyqt5_to_pyqt6.py --dry_run qgis_hub_plugin
