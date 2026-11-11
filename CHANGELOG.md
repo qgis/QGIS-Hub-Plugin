@@ -8,17 +8,32 @@ Unreleased
 
 ## version_tag - YYYY-DD-mm
 
-### Added
+Added:
 
-### Changed
+Changed:
 
-### Removed
+Removed:
 
 -->
 
+## 0.7.0 - 2026-11-11
+
+Added:
+
+- Search now also matches resource descriptions, not only the name and
+  the creator
+- Unfinished search patterns such as `(dark` are searched as plain text
+  instead of breaking the filter
+
+Changed:
+
+- Description and preview boxes follow the QGIS UI theme instead of a
+  hardcoded light grey background (readable in dark themes)
+- Bumped CI actions and development/documentation dependencies
+
 ## 0.6.0 - 2026-05-15
 
-### Added
+Added:
 
 - Added support for QGIS 4 / Qt6 alongside existing QGIS 3 / Qt5 support
   (`supportsQt6=True`, `qgisMaximumVersion=4.99`)
@@ -40,7 +55,7 @@ Unreleased
 - Added Qt6 / QGIS 4 migration documentation under the contribution
   guide
 
-### Changed
+Changed:
 
 - Migrated all Qt enum usage to the fully-scoped form
   (`Qt.ItemDataRole.UserRole`, `QSizePolicy.Policy.Minimum`,
@@ -51,7 +66,7 @@ Unreleased
 - Bumped pre-commit `black` to 25.1.0 and `pyupgrade` to 3.21.2 for
   Python 3.14 compatibility
 
-### Fixed
+Fixed:
 
 - Fixed `tr()` + f-string usage in new error branches; translations are
   now extractable by `pylupdate` via `tr("...").format(...)`
@@ -66,7 +81,7 @@ Unreleased
 
 ## 0.5.0 - 2025-12-25
 
-### Added
+Added:
 
 - Added screenshot resource type support
 - Added comprehensive test suite with mock API responses
@@ -75,7 +90,7 @@ Unreleased
 - Added comprehensive tests for multiple subtypes support
 - Set up development environment with virtual environment
 
-### Changed
+Changed:
 
 - Improved error handling for invalid QGIS Hub API responses
 - Made resource URL clickable in API error messages
@@ -86,7 +101,7 @@ Unreleased
 - Simplified test structure: moved all QGIS-dependent tests to tests/qgis/
 - Enabled unit tests to run without QGIS via conditional imports
 
-### Fixed
+Fixed:
 
 - Fixed datetime parsing for Python < 3.11 compatibility
 - Fixed file dialog from appearing during download tests
@@ -95,13 +110,13 @@ Unreleased
 
 ## 0.4.1 - 2025-12-25
 
-### Fixed
+Fixed:
 
 - Fixed bug when adding processing scripts to QGIS
 
 ## 0.4.0 - 2025-05-22
 
-### Added
+Added:
 
 - Added support for 'Map' and 'Processing Scripts' resource type
 - Implemented dynamic resource type handling for future-proof compatibility
@@ -109,7 +124,7 @@ Unreleased
 - Added model dependencies display in preview panel
 - Added close button to resource preview window
 
-### Changed
+Changed:
 
 - Renamed resource type labels to match QGIS Hub Website
 - Enhanced UI with improved spacing and layout

@@ -56,3 +56,4 @@ jobs:
         --github-token ${{ secrets.GITHUB_TOKEN }}
         --allow-uncommitted-changes
         --create-plugin-repo
+        --qgis-token ${{ secrets.QGIS_PLUGIN_TOKEN }}
