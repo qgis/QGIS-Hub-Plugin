@@ -16,6 +16,18 @@ Removed:
 
 -->
 
+## 0.7.1 - 2026-11-11
+
+Fixed:
+
+- Qt6 enum compatibility issues and Bandit findings reported by the QGIS
+  plugin repository scan, which blocked 0.7.0
+
+Changed:
+
+- CI runs Bandit and the QGIS Qt6 compatibility check to catch these
+  issues before uploading
+
 ## 0.7.0 - 2026-11-11
 
 Added:

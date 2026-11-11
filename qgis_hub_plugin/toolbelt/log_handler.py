@@ -135,7 +135,9 @@ class PlgLogger(logging.Handler):
                 else:
                     mini_dlg = QgsMessageOutput.createMessageOutput()
                     mini_dlg.setTitle(application)
-                    mini_dlg.setMessage(message, QgsMessageOutput.MessageText)
+                    mini_dlg.setMessage(
+                        message, QgsMessageOutput.MessageType.MessageText
+                    )
                     widget_button.clicked.connect(partial(mini_dlg.showMessage, False))
 
                 notification.layout().addWidget(widget_button)

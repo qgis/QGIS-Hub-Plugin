@@ -97,6 +97,18 @@ jobs:
         run: |
           python3 -c "from qgis.core import QgsApplication; print('✓ QGIS Python available')"
 
+      # same Qt6 check as plugins.qgis.org, which blocks the upload on findings
+      - name: Check Qt6 compatibility
+        if: matrix.qt-version == 'Qt6'
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends python3-pyqt6.qtquick python3-pyqt6.qtsvg python3-pyqt6.qsci
+          python3 -m pip install ${{ matrix.pip-extra-args }} tokenize-rt
+          python3 -c "import urllib.request; urllib.request.urlretrieve('https://raw.githubusercontent.com/qgis/QGIS/master/scripts/pyqt5_to_pyqt6/pyqt5_to_pyqt6.py', '/tmp/pyqt5_to_pyqt6.py')"
+          python3 /tmp/pyqt5_to_pyqt6.py --dry_run --logfile /tmp/qt6.log qgis_hub_plugin
+          cat /tmp/qt6.log
+          # --dry_run always exits 0, so fail on any reported issue
+          ! grep -E '\.py:[0-9]+:[0-9]+ - ' /tmp/qt6.log
+
       - name: Run QGIS tests
         run: |
           python3 -m pytest tests/ -v --cov=qgis_hub_plugin --cov-report=xml --cov-report=term
