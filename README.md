@@ -1,40 +1,80 @@
-# QGIS Hub Plugin - QGIS Plugin
+# QGIS Hub Plugin
 
-A QGIS plugins to fetch resources from the QGIS Hub
+[![QGIS plugin](https://img.shields.io/badge/QGIS-plugin-589632?logo=qgis&logoColor=white)](https://plugins.qgis.org/plugins/qgis_hub_plugin/)
+[![Release](https://img.shields.io/github/v/release/qgis/QGIS-Hub-Plugin)](https://github.com/qgis/QGIS-Hub-Plugin/releases)
+[![Tester](https://github.com/qgis/QGIS-Hub-Plugin/actions/workflows/tester.yml/badge.svg)](https://github.com/qgis/QGIS-Hub-Plugin/actions/workflows/tester.yml)
+[![Linter](https://github.com/qgis/QGIS-Hub-Plugin/actions/workflows/linter.yml/badge.svg)](https://github.com/qgis/QGIS-Hub-Plugin/actions/workflows/linter.yml)
+[![Documentation](https://github.com/qgis/QGIS-Hub-Plugin/actions/workflows/documentation.yml/badge.svg)](https://qgis.github.io/QGIS-Hub-Plugin/)
+[![License: GPL v3](https://img.shields.io/github/license/qgis/QGIS-Hub-Plugin)](LICENSE)
 
-[Resource Browser](./docs/images/resource_browser.png)
+Browse the resources shared on the [QGIS Hub](https://hub.qgis.org/) and add them to QGIS in one click, without
+leaving QGIS.
 
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+![Resource Browser](docs/images/resource_browser.png)
 
-[![flake8](https://img.shields.io/badge/linter-flake8-green)](https://flake8.pycqa.org/)
+## Features
 
-### Tooling
+- Browse styles, projects (GeoPackages), processing models and scripts, layer definitions (QLR), 3D models, maps and
+  screenshots from the QGIS Hub. New resource types published on the Hub show up automatically.
+- Search by name, creator or description, and filter by resource type and subtype.
+- Grid view with resizable thumbnails, or list view sortable by name, creator, download count and upload date.
+- Preview the selected resource with its description and details.
+- Add a resource to QGIS directly:
+  - styles are imported into the Style Manager
+  - processing models and scripts are added to the Processing Toolbox
+  - projects and layer definitions are loaded into QGIS
+  - maps open in the web browser
+- Or download it to disk, optionally opening the download folder.
+- The resource list and thumbnails are cached locally; refresh them from the Hub, or clear the cache in the plugin
+  settings.
 
-This project is configured with the following tools:
+## Installation
 
-- [Black](https://black.readthedocs.io/en/stable/) to format the code without any existential question
-- [iSort](https://pycqa.github.io/isort/) to sort the Python imports
+The plugin is published on the QGIS plugins repository: <https://plugins.qgis.org/plugins/qgis_hub_plugin/>.
 
-Code rules are enforced with [pre-commit](https://pre-commit.com/) hooks.
-Static code analisis is based on: Flake8
+1. In QGIS, open **Plugins → Manage and Install Plugins…**
+1. Search for **QGIS Hub Plugin** and click **Install Plugin**.
+1. Open the resource browser from the plugin's toolbar button or from **Plugins → QGIS Hub Plugin**.
 
-See also: [contribution guidelines](CONTRIBUTING.md).
+Supports QGIS 3.28 and later (Qt5) and QGIS 4 (Qt6).
 
-## CI/CD
+## Documentation
 
-Plugin is linted, tested, packaged and published with GitHub Actions.
+- User and developer documentation: <https://qgis.github.io/QGIS-Hub-Plugin/>
+- Report a bug or request a feature: <https://github.com/qgis/QGIS-Hub-Plugin/issues>
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
 
-The Linter workflow runs [Bandit](https://bandit.readthedocs.io/) and the Qt6 test job runs QGIS's
-`pyqt5_to_pyqt6.py` check: the same scans the [QGIS plugins repository](https://plugins.qgis.org/)
-runs on upload, where any finding blocks the version.
+## Development
 
-### Releasing
+```sh
+# PyQGIS comes from the system QGIS install, so the venv needs system site packages
+python3 -m venv .venv --system-site-packages
+source .venv/bin/activate
+python -m pip install -U -r requirements/development.txt -r requirements/testing.txt
+pre-commit install
+
+# tests
+pytest tests/unit/   # without QGIS
+pytest tests/qgis/   # with QGIS
+```
+
+More in the [development environment setup](docs/development/environment.md), the [testing guide](TESTING_GUIDE.md)
+and the [contribution guidelines](CONTRIBUTING.md).
+
+Code is formatted with [Black](https://black.readthedocs.io/en/stable/) and [isort](https://pycqa.github.io/isort/) and
+linted with [Flake8](https://flake8.pycqa.org/), through [pre-commit](https://pre-commit.com/) hooks.
+
+GitHub Actions run the tests on QGIS 3 (Qt5) and QGIS 4 (Qt6), lint the code, and build the
+[documentation](https://qgis.github.io/QGIS-Hub-Plugin/) with Sphinx from `docs/`. They also run
+[Bandit](https://bandit.readthedocs.io/) and QGIS's `pyqt5_to_pyqt6.py` check, the same scans the QGIS plugins
+repository runs on upload, where any finding blocks the version.
+
+## Releasing
 
 Pushing a tag triggers the Releaser workflow, which uses [qgis-plugin-ci](https://github.com/opengisch/qgis-plugin-ci/) to
-create the GitHub release with the plugin zip and `plugins.xml`, and to upload the zip to the QGIS plugins repository
-(with the `QGIS_PLUGIN_TOKEN` repository secret, a token from the plugin's page on plugins.qgis.org).
+create the GitHub release with the plugin zip and `plugins.xml`, and to upload the zip to the
+[QGIS plugins repository](https://plugins.qgis.org/plugins/qgis_hub_plugin/) (with the `QGIS_PLUGIN_TOKEN` repository
+secret, a token from the plugin's page on plugins.qgis.org).
 
 1. Open a PR adding the new version to `CHANGELOG.md`, and merge it into `main`:
 
@@ -76,47 +116,13 @@ qgis-plugin-ci changelog X.Y.Z
 qgis-plugin-ci package X.Y.Z --allow-uncommitted-changes
 ```
 
-### Documentation
+## Credits
 
-The documentation is generated using Sphinx and is automatically generated through the CI and published on Pages.
-
-- homepage: <https://github.com/qgis/QGIS-Hub-Plugin>
-- repository: <https://github.com/qgis/QGIS-Hub-Plugin>
-- tracker: <https://github.com/qgis/QGIS-Hub-Plugin/issues>
-
----
-
-## Next steps
-
-### Set up development environment
-
-> Typical commands on Linux (Ubuntu).
-
-1. If you don't pick the `git init` option, initialize your local repository:
-
-   ```sh
-   git init
-   ```
-
-1. Follow the [embedded documentation to set up your development environment](./docs/development/environment.md)
-1. Add all files to git index to prepare initial commit:
-
-   ```sh
-   git add -A
-   ```
-
-1. Run the git hooks to ensure that everything runs OK and to start developing on quality standards:
-
-   ```sh
-   pre-commit run
-   ```
-
-### Try to build documentation locally
-
-1. Have a look to the [plugin's metadata.txt file](qgis_hub_plugin/metadata.txt): review it, complete it or fix it if needed (URLs, etc.).
-1. Follow the [embedded documentation to build plugin documentation locally](./docs/development/environment.md)
-
----
+The idea of the plugin comes from [Tim Sutton](https://github.com/timlinux), at the
+[QGIS Contributor Meeting 2023 in 's-Hertogenbosch](https://github.com/qgis/QGIS/wiki/25th-Contributor-Meeting-in-'s-Hertogenbosch).
+It is developed by [Ismail Sunni](https://github.com/ismailsunni) and [Ronit Jadhav](https://github.com/ronitjadhav) as
+part of [Camptocamp](https://www.camptocamp.com/en)'s open source contributions, with help from
+[contributors](https://github.com/qgis/QGIS-Hub-Plugin/graphs/contributors).
 
 ## License
 
