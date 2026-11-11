@@ -3,6 +3,6 @@
 
 pytest-cov>=3,<5
 pytest-mock>=3.10,<4
-packaging>=23
+packaging>=26.3
 
 requests>=2.25.1
