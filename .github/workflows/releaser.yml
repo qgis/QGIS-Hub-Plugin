@@ -7,7 +7,7 @@ on:
 
 env:
   PROJECT_FOLDER: "qgis_hub_plugin"
-  PYTHON_VERSION: 3.9
+  PYTHON_VERSION: "3.12"
 
 
 jobs:
