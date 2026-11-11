@@ -13,7 +13,7 @@ on:
 
 env:
   PROJECT_FOLDER: "qgis_hub_plugin"
-  PYTHON_VERSION: 3.9
+  PYTHON_VERSION: "3.12"
 
 
 jobs:
@@ -34,14 +34,11 @@ jobs:
       - name: Install project requirements
         run: |
           python -m pip install -U pip setuptools wheel
-          python -m pip install -U flake8 bandit
+          python -m pip install -U flake8 flake8-qgis bandit
 
+      # plugins.qgis.org also runs flake8 on upload (informational), config in setup.cfg
       - name: Lint with flake8
-        run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 ${{ env.PROJECT_FOLDER }} --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings.
-          flake8 ${{ env.PROJECT_FOLDER }} --count --exit-zero --statistics
+        run: flake8 ${{ env.PROJECT_FOLDER }} --show-source
 
       # same security scan as plugins.qgis.org, which blocks the upload on findings
       - name: Security scan with bandit

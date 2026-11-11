@@ -240,7 +240,7 @@ The project uses pre-commit hooks (`.pre-commit-config.yaml`) to enforce:
 
 See `setup.cfg` for detailed flake8 rules. Key settings:
 - Excludes: `.git`, `__pycache__`, `docs/conf.py`, `build`, `dist`, `.venv*`, `tests`
-- Ignored rules: E121, E123, E126, E203, E226, E24, E704, QGS105, W503, W504
+- Ignored rules: E121, E123, E126, E203, E226, E24, E704, QGS105, QGS201, QGS202, W503, W504
 - QGIS-specific checks via `flake8-qgis` plugin
 
 ## Plugin Metadata
