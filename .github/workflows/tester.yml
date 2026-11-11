@@ -97,6 +97,14 @@ jobs:
         run: |
           python3 -c "from qgis.core import QgsApplication; print('✓ QGIS Python available')"
 
+      # same Qt6 check as plugins.qgis.org, which blocks the upload on findings
+      - name: Check Qt6 compatibility
+        if: matrix.qt-version == 'Qt6'
+        run: |
+          python3 -m pip install ${{ matrix.pip-extra-args }} tokenize-rt
+          python3 -c "import urllib.request; urllib.request.urlretrieve('https://raw.githubusercontent.com/qgis/QGIS/master/scripts/pyqt5_to_pyqt6/pyqt5_to_pyqt6.py', '/tmp/pyqt5_to_pyqt6.py')"
+          python3 /tmp/pyqt5_to_pyqt6.py --dry_run qgis_hub_plugin
+
       - name: Run QGIS tests
         run: |
           python3 -m pytest tests/ -v --cov=qgis_hub_plugin --cov-report=xml --cov-report=term

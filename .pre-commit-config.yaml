@@ -36,10 +36,10 @@ repos:
         args: ["--profile", "black", "--filter-files"]
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
+    rev: 7.3.0
     hooks:
       - id: flake8
-        files: ^pyqgis_resource_browser/.*\.py$
+        files: ^qgis_hub_plugin/.*\.py$
         additional_dependencies: ["flake8-qgis<2"]
         args:
           [

@@ -176,13 +176,19 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         super().closeEvent(event)
 
     def show_success_message(self, text):
-        return self.message_bar.pushMessage(self.tr("Success"), text, Qgis.Success, 5)
+        return self.message_bar.pushMessage(
+            self.tr("Success"), text, Qgis.MessageLevel.Success, 5
+        )
 
     def show_error_message(self, text):
-        return self.message_bar.pushMessage(self.tr("Error"), text, Qgis.Critical, 5)
+        return self.message_bar.pushMessage(
+            self.tr("Error"), text, Qgis.MessageLevel.Critical, 5
+        )
 
     def show_warning_message(self, text):
-        return self.message_bar.pushMessage(self.tr("Warning"), text, Qgis.Warning, 5)
+        return self.message_bar.pushMessage(
+            self.tr("Warning"), text, Qgis.MessageLevel.Warning, 5
+        )
 
     def _start_thumbnail_progress(self, total):
         """Show a progress bar in the QGIS main message bar for the initial
@@ -204,7 +210,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
         widget.layout().addWidget(progress)
-        message_bar.pushWidget(widget, Qgis.Info)
+        message_bar.pushWidget(widget, Qgis.MessageLevel.Info)
         return progress, widget
 
     def _finish_thumbnail_progress(self, widget):
