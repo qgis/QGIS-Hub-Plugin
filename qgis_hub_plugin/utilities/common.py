@@ -1,7 +1,7 @@
 import os
 import shutil
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from qgis.core import QgsApplication, QgsNetworkAccessManager, QgsNetworkReplyContent
 from qgis.PyQt.QtCore import QFile, QIODevice, QUrl

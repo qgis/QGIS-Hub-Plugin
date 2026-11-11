@@ -43,7 +43,6 @@ from qgis_hub_plugin.gui.constants import (
     CreatorRole,
     DescriptionRole,
     NameRole,
-    ResourceSubtypeRole,
     ResourceTypeRole,
     ResoureType,
     ResoureTypeCategories,
@@ -932,7 +931,7 @@ class ResourceBrowserDialog(QDialog, UI_CLASS):
         self.listViewResources.setIconSize(QSize(size, size))
         self.listViewResources.setGridSize(QSize(size + 20, size + 40))
 
-    def setup_resource_type_tree(self):
+    def setup_resource_type_tree(self):  # noqa: C901
         """
         Setup the resource type tree widget with available resource types.
         The tree will have a main "Resource Types" item with child items for each resource type.
